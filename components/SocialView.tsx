@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Story, SocialPost, User, Comment } from '../types';
+import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api'; // Import real API
-import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare } from 'lucide-react';
 
 // --- Story Viewer Overlay Component ---
 const StoryViewer = ({ 
@@ -222,8 +222,18 @@ export const SocialView: React.FC<SocialViewProps> = ({
   const [newComment, setNewComment] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
 
+  // Messaging State
+  const [activeChatPartner, setActiveChatPartner] = useState<User | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Story Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load Real Posts
   useEffect(() => {
@@ -240,6 +250,30 @@ export const SocialView: React.FC<SocialViewProps> = ({
           api.getComments(activePostId).then(setComments);
       }
   }, [activePostId]);
+
+  // Fetch Conversations when inbox is active
+  useEffect(() => {
+      if(activeTab === 'inbox') {
+          api.getConversations(currentUser.id).then(setConversations);
+      }
+  }, [activeTab, currentUser.id]);
+
+  // Fetch Messages when chat is active
+  useEffect(() => {
+      if(activeChatPartner) {
+          api.getMessages(currentUser.id, activeChatPartner.id).then(setMessages);
+          const timer = setInterval(() => {
+             // Simple poll for new messages in active chat
+             api.getMessages(currentUser.id, activeChatPartner.id).then(setMessages);
+          }, 5000);
+          return () => clearInterval(timer);
+      }
+  }, [activeChatPartner, currentUser.id]);
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleCreatePost = async () => {
       if (!newPostText && !newPostImage) return;
@@ -276,13 +310,78 @@ export const SocialView: React.FC<SocialViewProps> = ({
           const type = file.type.startsWith('video') ? 'video' : 'image';
           await api.uploadStory(file, currentUser.id, type);
           alert("Story uploaded!");
-          // Trigger refresh logic via parent or reload
       } catch (e) { console.error(e); alert("Failed to upload story"); }
   };
 
   const incrementView = (postId: string) => {
       api.incrementPostView(postId);
   };
+
+  const handleSendMessage = async () => {
+      if(!activeChatPartner || !chatInput.trim()) return;
+      try {
+          await api.sendMessage(currentUser.id, activeChatPartner.id, chatInput);
+          setChatInput('');
+          // Optimistic update
+          setMessages([...messages, {
+              id: Date.now().toString(),
+              senderId: currentUser.id,
+              receiverId: activeChatPartner.id,
+              content: chatInput,
+              timestamp: Date.now(),
+              isRead: false
+          }]);
+      } catch(e) { console.error(e); alert("Failed to send"); }
+  };
+
+  const handleSearchUsers = async (q: string) => {
+      setSearchQuery(q);
+      if(q.length > 2) {
+          const results = await api.searchUsers(q);
+          setUserSearchResults(results.filter(u => u.id !== currentUser.id));
+      } else {
+          setUserSearchResults([]);
+      }
+  };
+
+  // --- RENDER CHAT INTERFACE ---
+  if (activeChatPartner) {
+      return (
+        <div className="h-full flex flex-col bg-black pt-12 pb-20 animate-fade-in">
+             <div className="flex items-center gap-3 p-4 border-b border-gray-800 bg-gray-900/50">
+                 <button onClick={() => setActiveChatPartner(null)} className="text-gray-400 hover:text-white"><ArrowLeft/></button>
+                 <img src={activeChatPartner.avatarUrl} className="w-8 h-8 rounded-full object-cover" />
+                 <span className="font-bold text-white">{activeChatPartner.username}</span>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                 {messages.map(m => {
+                     const isMe = m.senderId === currentUser.id;
+                     return (
+                         <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                             <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${isMe ? 'bg-neon-purple text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'}`}>
+                                 {m.content}
+                             </div>
+                         </div>
+                     );
+                 })}
+                 <div ref={messagesEndRef} />
+             </div>
+
+             <div className="p-4 bg-gray-900/50 border-t border-gray-800 flex gap-2">
+                 <input 
+                    type="text" 
+                    value={chatInput} 
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-gray-800 rounded-full px-4 text-sm text-white focus:outline-none"
+                 />
+                 <button onClick={handleSendMessage} className="p-2 bg-neon-pink rounded-full text-white"><Send size={18}/></button>
+             </div>
+        </div>
+      );
+  }
 
   return (
     <div className="h-full flex flex-col bg-neon-dark pt-12 pb-20">
@@ -346,6 +445,42 @@ export const SocialView: React.FC<SocialViewProps> = ({
           </div>
       )}
 
+      {/* New Chat User Search Modal */}
+      {showUserSearch && (
+          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col pt-16 px-4 animate-fade-in">
+               <div className="flex justify-between items-center mb-4">
+                   <h2 className="text-xl font-bold text-white">New Message</h2>
+                   <button onClick={() => setShowUserSearch(false)}><X className="text-gray-400"/></button>
+               </div>
+               <div className="bg-gray-900 rounded-xl p-3 flex items-center gap-2 mb-4">
+                   <Search className="text-gray-500 w-5 h-5"/>
+                   <input 
+                      autoFocus
+                      type="text" 
+                      placeholder="Search users..." 
+                      className="bg-transparent text-white focus:outline-none w-full"
+                      value={searchQuery}
+                      onChange={e => handleSearchUsers(e.target.value)}
+                   />
+               </div>
+               <div className="space-y-3">
+                   {userSearchResults.map(u => (
+                       <div 
+                          key={u.id} 
+                          className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl cursor-pointer hover:bg-gray-800"
+                          onClick={() => {
+                              setActiveChatPartner(u);
+                              setShowUserSearch(false);
+                          }}
+                        >
+                           <img src={u.avatarUrl} className="w-10 h-10 rounded-full object-cover"/>
+                           <span className="font-bold text-white">{u.username}</span>
+                       </div>
+                   ))}
+               </div>
+          </div>
+      )}
+
       {/* Header Tabs */}
       <div className="flex items-center justify-center gap-6 px-4 mb-4 z-10 relative">
         <button 
@@ -360,7 +495,7 @@ export const SocialView: React.FC<SocialViewProps> = ({
             className={`text-lg font-bold transition-colors ${activeTab === 'inbox' ? 'text-white relative' : 'text-gray-600'}`}
         >
             Inbox
-            <span className="absolute -top-1 -right-2 w-2 h-2 bg-neon-pink rounded-full"></span>
+            {conversations.some(c => c.unreadCount > 0) && <span className="absolute -top-1 -right-2 w-2 h-2 bg-neon-pink rounded-full"></span>}
         </button>
       </div>
 
@@ -485,8 +620,48 @@ export const SocialView: React.FC<SocialViewProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-            Inbox (Mock)
+        <div className="flex-1 flex flex-col bg-black relative">
+            {conversations.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 text-center">
+                    <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mb-4">
+                        <MessageSquare className="text-gray-600" size={32} />
+                    </div>
+                    <p className="mb-4">No messages yet.</p>
+                    <button onClick={() => setShowUserSearch(true)} className="bg-neon-purple text-white px-6 py-2 rounded-full font-bold text-sm shadow-lg shadow-neon-purple/20">
+                        Start a Chat
+                    </button>
+                </div>
+            ) : (
+                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+                    {conversations.map(c => (
+                        <div 
+                            key={c.partnerId} 
+                            onClick={() => setActiveChatPartner({ id: c.partnerId, username: c.username, avatarUrl: c.avatarUrl } as any)}
+                            className="flex items-center gap-3 p-3 bg-gray-900/40 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer"
+                        >
+                            <div className="relative">
+                                <img src={c.avatarUrl} className="w-12 h-12 rounded-full object-cover" />
+                                {c.unreadCount > 0 && <div className="absolute -top-1 -right-1 bg-neon-pink text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold border-2 border-black">{c.unreadCount}</div>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-1">
+                                    <h4 className="font-bold text-white text-sm">{c.username}</h4>
+                                    <span className="text-[10px] text-gray-500">{new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <p className={`text-xs truncate ${c.unreadCount > 0 ? 'text-white font-bold' : 'text-gray-500'}`}>{c.lastMessage}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            
+            {/* FAB for new chat */}
+            <button 
+                onClick={() => setShowUserSearch(true)}
+                className="absolute bottom-6 right-6 w-14 h-14 bg-neon-purple rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-10"
+            >
+                <PenSquare className="text-white" size={24} />
+            </button>
         </div>
       )}
     </div>

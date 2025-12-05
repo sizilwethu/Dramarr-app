@@ -106,6 +106,15 @@ export interface Message {
   isRead: boolean;
 }
 
+export interface Conversation {
+    partnerId: string;
+    username: string;
+    avatarUrl: string;
+    lastMessage: string;
+    timestamp: number;
+    unreadCount: number;
+}
+
 export interface Notification {
   id: string;
   type: 'like' | 'follow' | 'comment' | 'system' | 'payout';

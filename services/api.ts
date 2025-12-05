@@ -1,6 +1,6 @@
 
 import { supabase } from '../lib/supabaseClient';
-import { User, Video, Series, Story, SocialPost, Comment } from '../types';
+import { User, Video, Series, Story, SocialPost, Comment, Message, Conversation } from '../types';
 
 // --- MAPPERS ---
 
@@ -158,6 +158,97 @@ export const api = {
          const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
          if(profile) return mapProfileToUser(profile);
          return null;
+    },
+
+    searchUsers: async (query: string): Promise<User[]> => {
+        if (!query) return [];
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .ilike('username', `%${query}%`)
+            .limit(10);
+        
+        if (error || !data) return [];
+        return data.map(p => mapProfileToUser(p));
+    },
+
+    // --- MESSAGING ---
+    getConversations: async (userId: string): Promise<Conversation[]> => {
+        // Fetch last 50 messages involving user to build inbox
+        // Note: In a production app, a dedicated 'conversations' table or distinct query is better.
+        const { data, error } = await supabase
+            .from('messages')
+            .select(`
+                *,
+                sender:sender_id (username, avatar_url),
+                receiver:receiver_id (username, avatar_url)
+            `)
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error || !data) return [];
+
+        const convMap = new Map<string, Conversation>();
+
+        data.forEach((msg: any) => {
+            const isMe = msg.sender_id === userId;
+            const partnerId = isMe ? msg.receiver_id : msg.sender_id;
+            const partnerProfile = isMe ? msg.receiver : msg.sender;
+
+            // Only add if not already present (since we ordered by desc, first hit is latest)
+            if (!convMap.has(partnerId)) {
+                convMap.set(partnerId, {
+                    partnerId: partnerId,
+                    username: partnerProfile?.username || 'Unknown',
+                    avatarUrl: partnerProfile?.avatar_url || 'https://via.placeholder.com/150',
+                    lastMessage: msg.content,
+                    timestamp: new Date(msg.created_at).getTime(),
+                    unreadCount: (!isMe && !msg.is_read) ? 1 : 0
+                });
+            } else {
+                 // Accumulate unread count
+                 const existing = convMap.get(partnerId)!;
+                 if (!isMe && !msg.is_read) {
+                     existing.unreadCount += 1;
+                 }
+            }
+        });
+
+        return Array.from(convMap.values());
+    },
+
+    getMessages: async (userId: string, partnerId: string): Promise<Message[]> => {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
+            .order('created_at', { ascending: true });
+
+        if (error || !data) return [];
+
+        // Mark as read (optimistic)
+        // In real app, call an RPC or update query here to set is_read=true for received messages
+        
+        return data.map((m: any) => ({
+            id: m.id,
+            senderId: m.sender_id,
+            receiverId: m.receiver_id,
+            content: m.content,
+            timestamp: new Date(m.created_at).getTime(),
+            isRead: m.is_read
+        }));
+    },
+
+    sendMessage: async (senderId: string, receiverId: string, content: string) => {
+        const { error } = await supabase
+            .from('messages')
+            .insert({
+                sender_id: senderId,
+                receiver_id: receiverId,
+                content: content
+            });
+        if (error) throw error;
     },
 
     // --- VIDEOS ---
