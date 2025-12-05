@@ -20,7 +20,7 @@
     "lucide-react": "^0.468.0",
     "recharts": "^2.14.1",
     "@supabase/supabase-js": "^2.47.0",
-    "@google/genai": "^0.21.0",
+    "@google/genai": "^1.31.0",
     "@capacitor/core": "^6.2.0",
     "@capacitor/android": "^6.2.0",
     "@capacitor/ios": "^6.2.0"
