@@ -324,22 +324,35 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                         )}
                     </div>
 
-                    <button 
-                        onClick={handleUpload}
-                        disabled={loading || !file}
-                        className="w-full bg-white text-black font-bold py-4 rounded-xl mt-4 flex items-center justify-center gap-2 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {loading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                                {uploadProgress > 0 ? `${uploadProgress}%` : 'Processing'}
-                            </div>
-                        ) : (
-                            <>
-                                <Check size={20} /> {mode === 'series' ? 'Create Series' : 'Publish Episode'}
-                            </>
-                        )}
-                    </button>
+                    {/* Prominent Progress Bar or Submit Button */}
+                    {loading ? (
+                        <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-4 animate-fade-in">
+                             <div className="flex justify-between items-center mb-2">
+                                 <div className="flex items-center gap-2">
+                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                     <span className="text-sm font-bold text-white">Uploading...</span>
+                                 </div>
+                                 <span className="text-sm font-bold text-neon-pink">{uploadProgress}%</span>
+                             </div>
+                             <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden shadow-inner">
+                                 <div 
+                                     className="h-full bg-gradient-to-r from-neon-purple to-neon-pink transition-all duration-300 ease-out relative"
+                                     style={{ width: `${uploadProgress}%` }}
+                                 >
+                                     <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                                 </div>
+                             </div>
+                             <p className="text-xs text-gray-500 text-center mt-2">Please wait while we process your video.</p>
+                        </div>
+                    ) : (
+                        <button 
+                            onClick={handleUpload}
+                            disabled={loading || !file}
+                            className="w-full bg-white text-black font-bold py-4 rounded-xl mt-4 flex items-center justify-center gap-2 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <Check size={20} /> {mode === 'series' ? 'Create Series' : 'Publish Episode'}
+                        </button>
+                    )}
                 </div>
             </>
         )}
