@@ -356,13 +356,25 @@ export const api = {
     },
 
     incrementStoryView: async (storyId: string) => {
-        const { data } = await supabase.rpc('increment_story_view', { story_id: storyId });
-        if (!data) {
-             const { data: s } = await supabase.from('stories').select('views').eq('id', storyId).single();
-             if(s) {
-                 await supabase.from('stories').update({ views: s.views + 1 }).eq('id', storyId);
-             }
-        }
+        // Call the secure RPC function to register view by IP
+        await supabase.rpc('register_view', { 
+            target_id: storyId, 
+            type_name: 'story' 
+        });
+    },
+
+    incrementVideoView: async (videoId: string) => {
+        await supabase.rpc('register_view', {
+            target_id: videoId,
+            type_name: 'video'
+        });
+    },
+
+    incrementPostView: async (postId: string) => {
+        await supabase.rpc('register_view', {
+            target_id: postId,
+            type_name: 'post'
+        });
     },
 
     // --- SOCIAL POSTS ---
@@ -459,13 +471,6 @@ export const api = {
          const { data: p } = await supabase.from('posts').select('likes').eq('id', postId).single();
          if(p) {
              await supabase.from('posts').update({ likes: p.likes + 1 }).eq('id', postId);
-         }
-    },
-    
-    incrementPostView: async (postId: string) => {
-         const { data: p } = await supabase.from('posts').select('views').eq('id', postId).single();
-         if(p) {
-             await supabase.from('posts').update({ views: p.views + 1 }).eq('id', postId);
          }
     },
 
