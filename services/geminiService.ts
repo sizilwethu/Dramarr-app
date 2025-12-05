@@ -3,7 +3,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 // Helper to safely get API Key
 const getApiKey = () => {
     try {
-        return import.meta.env.VITE_GOOGLE_API_KEY || (process.env as any).API_KEY || '';
+        // @ts-ignore
+        const meta = import.meta as any;
+        return meta.env?.VITE_GOOGLE_API_KEY || (process.env as any).API_KEY || '';
     } catch {
         return '';
     }

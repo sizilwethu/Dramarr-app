@@ -4,8 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const getEnvVar = (key: string, fallback: string) => {
   try {
     // Check if import.meta.env exists
-    if (import.meta && import.meta.env) {
-      return import.meta.env[key] || fallback;
+    // @ts-ignore
+    const meta = import.meta as any;
+    if (meta && meta.env) {
+      return meta.env[key] || fallback;
     }
     return fallback;
   } catch (e) {
