@@ -699,7 +699,7 @@ export const SocialView: React.FC<SocialViewProps> = ({
                         ) : (
                             <>
                                 {post.imageUrl && (
-                                    <img src={post.imageUrl} className="w-full h-64 object-cover rounded-lg mb-3" onLoad={() => incrementView(post.id)} />
+                                    <img src={post.imageUrl} className="w-full h-auto rounded-lg mb-3" onLoad={() => incrementView(post.id)} />
                                 )}
                                 <p className="text-sm text-gray-300"><span className="font-bold text-white mr-2">{post.username}</span>{post.content}</p>
                             </>
