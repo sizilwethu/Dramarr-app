@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api'; // Import real API
-import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save } from 'lucide-react';
 
 // --- Story Viewer Overlay Component ---
 const StoryViewer = ({ 
@@ -216,6 +216,11 @@ export const SocialView: React.FC<SocialViewProps> = ({
   const [newPostImage, setNewPostImage] = useState<File | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
 
+  // Edit Post State
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [showMenuId, setShowMenuId] = useState<string | null>(null);
+
   // Comments State
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -234,6 +239,7 @@ export const SocialView: React.FC<SocialViewProps> = ({
   // Story Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
   // Load Real Posts
   useEffect(() => {
@@ -293,6 +299,30 @@ export const SocialView: React.FC<SocialViewProps> = ({
       setLoading(false);
   };
 
+  const handleStartEditing = (post: SocialPost) => {
+      setEditingPostId(post.id);
+      setEditContent(post.content);
+      setShowMenuId(null);
+  };
+
+  const handleSaveEdit = async () => {
+      if (!editingPostId || !editContent.trim()) return;
+      try {
+          await api.editSocialPost(editingPostId, editContent);
+          
+          // Optimistic update
+          setPosts(prev => prev.map(p => 
+              p.id === editingPostId ? { ...p, content: editContent } : p
+          ));
+          
+          setEditingPostId(null);
+          setEditContent('');
+      } catch (e) {
+          console.error("Failed to edit post", e);
+          alert("Failed to save changes");
+      }
+  };
+
   const handlePostComment = async () => {
       if(!activePostId || !newComment) return;
       try {
@@ -300,6 +330,13 @@ export const SocialView: React.FC<SocialViewProps> = ({
           setNewComment('');
           setReplyToId(null);
           api.getComments(activePostId).then(setComments);
+          
+          setPosts(prevPosts => prevPosts.map(p => 
+            p.id === activePostId 
+                ? { ...p, comments: p.comments + 1 }
+                : p
+          ));
+
       } catch (e) { console.error(e); }
   };
 
@@ -413,8 +450,16 @@ export const SocialView: React.FC<SocialViewProps> = ({
                                 <div className="flex-1">
                                     <p className="text-sm text-gray-300"><span className="font-bold text-white mr-2">{c.username}</span>{c.text}</p>
                                     <div className="flex gap-4 mt-1">
-                                        <button onClick={() => setReplyToId(c.id)} className="text-xs text-gray-500 hover:text-white">Reply</button>
-                                        <span className="text-xs text-gray-600">1h</span>
+                                        <button 
+                                            onClick={() => {
+                                                setReplyToId(c.id);
+                                                commentInputRef.current?.focus();
+                                            }} 
+                                            className="text-xs text-gray-500 hover:text-white"
+                                        >
+                                            Reply
+                                        </button>
+                                        <span className="text-xs text-gray-600">{new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                     </div>
                                 </div>
                             </div>
@@ -433,11 +478,13 @@ export const SocialView: React.FC<SocialViewProps> = ({
                   <div className="mt-2 border-t border-gray-800 pt-2 flex gap-2 items-center">
                       {replyToId && <span className="text-xs text-neon-purple whitespace-nowrap">Replying... <X size={10} className="inline cursor-pointer" onClick={() => setReplyToId(null)}/></span>}
                       <input 
+                        ref={commentInputRef}
                         type="text" 
                         value={newComment} 
                         onChange={e => setNewComment(e.target.value)}
                         placeholder="Add a comment..." 
                         className="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white focus:outline-none"
+                        onKeyDown={e => e.key === 'Enter' && handlePostComment()}
                       />
                       <button onClick={handlePostComment} className="text-neon-pink font-bold text-sm">Post</button>
                   </div>
@@ -588,18 +635,79 @@ export const SocialView: React.FC<SocialViewProps> = ({
                                 <p className="text-[10px] text-gray-500">{post.timestamp}</p>
                             </div>
                         </div>
-                        <MoreHorizontal size={16} className="text-gray-500" />
+                        
+                        {/* Edit/Delete Menu (Only for Owner) */}
+                        {post.userId === currentUser.id && (
+                            <div className="relative">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowMenuId(showMenuId === post.id ? null : post.id); }}
+                                    className="text-gray-500 hover:text-white p-1 rounded-full hover:bg-gray-800"
+                                >
+                                    <MoreHorizontal size={16} />
+                                </button>
+                                {showMenuId === post.id && (
+                                    <div className="absolute right-0 top-8 bg-black border border-gray-800 rounded-lg shadow-xl z-20 w-32 py-1">
+                                        <button 
+                                            onClick={() => handleStartEditing(post)}
+                                            className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-900 hover:text-white flex items-center gap-2"
+                                        >
+                                            <Edit2 size={14}/> Edit
+                                        </button>
+                                        <button 
+                                            onClick={() => { onDeletePost(post.id); setShowMenuId(null); }}
+                                            className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-gray-900 flex items-center gap-2"
+                                        >
+                                            <Trash2 size={14}/> Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    {post.imageUrl && (
-                        <img src={post.imageUrl} className="w-full h-64 object-cover" onLoad={() => incrementView(post.id)} />
-                    )}
-                    <div className="p-3">
+
+                    {/* Post Content or Edit Form */}
+                    <div className="px-3 pb-3">
+                        {editingPostId === post.id ? (
+                            <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-800">
+                                <textarea 
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    className="w-full bg-transparent text-white text-sm focus:outline-none min-h-[60px] mb-2"
+                                    autoFocus
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <button 
+                                        onClick={() => { setEditingPostId(null); setEditContent(''); }}
+                                        className="text-xs text-gray-400 px-3 py-1 rounded hover:bg-gray-800"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveEdit}
+                                        className="text-xs bg-neon-purple text-white px-3 py-1 rounded font-bold flex items-center gap-1"
+                                    >
+                                        <Save size={12}/> Save
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {post.imageUrl && (
+                                    <img src={post.imageUrl} className="w-full h-64 object-cover rounded-lg mb-3" onLoad={() => incrementView(post.id)} />
+                                )}
+                                <p className="text-sm text-gray-300"><span className="font-bold text-white mr-2">{post.username}</span>{post.content}</p>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="p-3 pt-0">
                          {post.isAd && (
                             <button className="w-full mb-3 bg-blue-900/30 text-blue-400 border border-blue-900 font-bold py-2 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-blue-900/50">
                                 {post.adActionLabel || 'Learn More'} <ExternalLink size={14}/>
                             </button>
                          )}
-                         <div className="flex gap-4 mb-2">
+                         <div className="flex gap-4 mt-2 border-t border-gray-800/50 pt-3">
                              <button onClick={() => api.likePost(post.id)} className="flex items-center gap-1 group">
                                 <Heart className="w-6 h-6 text-white group-hover:text-neon-pink transition-colors" />
                                 <span className="text-xs text-gray-400">{post.likes}</span>
@@ -613,7 +721,6 @@ export const SocialView: React.FC<SocialViewProps> = ({
                                  <span className="text-xs">{post.views || 0}</span>
                              </div>
                          </div>
-                         <p className="text-sm text-gray-300"><span className="font-bold text-white mr-2">{post.username}</span>{post.content}</p>
                     </div>
                 </div>
             ))}

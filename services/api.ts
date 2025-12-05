@@ -174,8 +174,6 @@ export const api = {
 
     // --- MESSAGING ---
     getConversations: async (userId: string): Promise<Conversation[]> => {
-        // Fetch last 50 messages involving user to build inbox
-        // Note: In a production app, a dedicated 'conversations' table or distinct query is better.
         const { data, error } = await supabase
             .from('messages')
             .select(`
@@ -196,7 +194,6 @@ export const api = {
             const partnerId = isMe ? msg.receiver_id : msg.sender_id;
             const partnerProfile = isMe ? msg.receiver : msg.sender;
 
-            // Only add if not already present (since we ordered by desc, first hit is latest)
             if (!convMap.has(partnerId)) {
                 convMap.set(partnerId, {
                     partnerId: partnerId,
@@ -207,7 +204,6 @@ export const api = {
                     unreadCount: (!isMe && !msg.is_read) ? 1 : 0
                 });
             } else {
-                 // Accumulate unread count
                  const existing = convMap.get(partnerId)!;
                  if (!isMe && !msg.is_read) {
                      existing.unreadCount += 1;
@@ -226,9 +222,6 @@ export const api = {
             .order('created_at', { ascending: true });
 
         if (error || !data) return [];
-
-        // Mark as read (optimistic)
-        // In real app, call an RPC or update query here to set is_read=true for received messages
         
         return data.map((m: any) => ({
             id: m.id,
@@ -343,19 +336,15 @@ export const api = {
             avatarUrl: s.profiles?.avatar_url,
             mediaUrl: s.media_url,
             type: s.type,
-            isViewed: false, // In real app, check a 'story_views' table
+            isViewed: false, 
             timestamp: new Date(s.created_at).getTime(),
             views: s.views || 0
         }));
     },
 
     incrementStoryView: async (storyId: string) => {
-        // Use RPC or simple update. Simple update for prototype:
-        // Note: Real apps use a separate table to track *unique* views per user
         const { data } = await supabase.rpc('increment_story_view', { story_id: storyId });
-        // Fallback if RPC not exists:
         if (!data) {
-             // Fetch current, then update (race condition risk but ok for proto)
              const { data: s } = await supabase.from('stories').select('views').eq('id', storyId).single();
              if(s) {
                  await supabase.from('stories').update({ views: s.views + 1 }).eq('id', storyId);
@@ -388,7 +377,11 @@ export const api = {
     getSocialPosts: async (): Promise<SocialPost[]> => {
         const { data, error } = await supabase
             .from('posts')
-            .select(`*, profiles:user_id (username, avatar_url)`)
+            .select(`
+                *, 
+                profiles:user_id (username, avatar_url),
+                comments(count)
+            `)
             .order('created_at', { ascending: false });
 
         if (error || !data) return [];
@@ -401,21 +394,27 @@ export const api = {
             content: p.content,
             imageUrl: p.image_url,
             likes: p.likes || 0,
-            comments: 0, // Need separate query or count
+            comments: p.comments?.[0]?.count || 0,
             views: p.views || 0,
             timestamp: new Date(p.created_at).toLocaleDateString() + ' ' + new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
         }));
     },
 
+    editSocialPost: async (postId: string, newContent: string) => {
+        const { error } = await supabase
+            .from('posts')
+            .update({ content: newContent })
+            .eq('id', postId);
+        if (error) throw error;
+    },
+
     likePost: async (postId: string) => {
-         // Simplified like increment
          const { data: p } = await supabase.from('posts').select('likes').eq('id', postId).single();
          if(p) {
              await supabase.from('posts').update({ likes: p.likes + 1 }).eq('id', postId);
          }
     },
     
-    // Increment Post View (Call when post appears in feed)
     incrementPostView: async (postId: string) => {
          const { data: p } = await supabase.from('posts').select('views').eq('id', postId).single();
          if(p) {
@@ -444,7 +443,6 @@ export const api = {
             replies: []
         }));
 
-        // Nest replies
         const rootComments: Comment[] = [];
         const commentMap = new Map();
         
