@@ -301,21 +301,34 @@ export const api = {
     },
 
     // --- STORIES ---
-    uploadStory: async (file: File, userId: string, type: 'image' | 'video') => {
+    uploadStory: async (file: File, userId: string, type: 'image' | 'video'): Promise<Story> => {
         const fileExt = file.name.split('.').pop();
         const filePath = `${userId}/stories/${Date.now()}.${fileExt}`;
-        const { error } = await supabase.storage.from('videos').upload(filePath, file); // Reusing videos bucket for convenience
+        const { error } = await supabase.storage.from('videos').upload(filePath, file); 
         if (error) throw error;
         
         const { data } = supabase.storage.from('videos').getPublicUrl(filePath);
         
-        const { error: dbError } = await supabase.from('stories').insert({
+        const { data: record, error: dbError } = await supabase.from('stories').insert({
             user_id: userId,
             media_url: data.publicUrl,
             type: type,
             views: 0
-        });
+        }).select(`*, profiles:user_id (username, avatar_url)`).single();
+
         if (dbError) throw dbError;
+        
+        return {
+            id: record.id,
+            userId: record.user_id,
+            username: record.profiles?.username || 'Unknown',
+            avatarUrl: record.profiles?.avatar_url,
+            mediaUrl: record.media_url,
+            type: record.type,
+            isViewed: false,
+            timestamp: new Date(record.created_at).getTime(),
+            views: 0
+        };
     },
 
     getStories: async (): Promise<Story[]> => {
@@ -353,7 +366,7 @@ export const api = {
     },
 
     // --- SOCIAL POSTS ---
-    createSocialPost: async (userId: string, content: string, imageFile?: File) => {
+    createSocialPost: async (userId: string, content: string, imageFile?: File): Promise<SocialPost> => {
         let imageUrl = null;
         if (imageFile) {
             const filePath = `${userId}/posts/${Date.now()}_${imageFile.name}`;
@@ -364,14 +377,28 @@ export const api = {
             }
         }
 
-        const { error } = await supabase.from('posts').insert({
+        const { data: record, error } = await supabase.from('posts').insert({
             user_id: userId,
             content,
             image_url: imageUrl,
             views: 0,
             likes: 0
-        });
+        }).select(`*, profiles:user_id (username, avatar_url)`).single();
+        
         if (error) throw error;
+        
+        return {
+            id: record.id,
+            userId: record.user_id,
+            username: record.profiles?.username || 'User',
+            avatarUrl: record.profiles?.avatar_url,
+            content: record.content,
+            imageUrl: record.image_url,
+            likes: 0,
+            comments: 0,
+            views: 0,
+            timestamp: new Date(record.created_at).toLocaleDateString() + ' ' + new Date(record.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        };
     },
 
     getSocialPosts: async (): Promise<SocialPost[]> => {
@@ -406,6 +433,26 @@ export const api = {
             .update({ content: newContent })
             .eq('id', postId);
         if (error) throw error;
+    },
+
+    deleteStory: async (storyId: string) => {
+         const { error } = await supabase.from('stories').delete().eq('id', storyId);
+         if(error) throw error;
+    },
+
+    deletePost: async (postId: string) => {
+         const { error } = await supabase.from('posts').delete().eq('id', postId);
+         if(error) throw error;
+    },
+
+    deleteComment: async (commentId: string) => {
+        const { error } = await supabase.from('comments').delete().eq('id', commentId);
+        if(error) throw error;
+    },
+
+    deleteVideo: async (videoId: string) => {
+        const { error } = await supabase.from('videos').delete().eq('id', videoId);
+        if(error) throw error;
     },
 
     likePost: async (postId: string) => {

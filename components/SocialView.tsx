@@ -195,6 +195,7 @@ interface SocialViewProps {
     posts: SocialPost[];
     onDeletePost: (id: string) => void;
     onDeleteStory: (id: string) => void;
+    onRefresh?: () => void;
 }
 
 export const SocialView: React.FC<SocialViewProps> = ({ 
@@ -202,7 +203,8 @@ export const SocialView: React.FC<SocialViewProps> = ({
     stories, 
     posts: initialPosts, 
     onDeletePost, 
-    onDeleteStory 
+    onDeleteStory,
+    onRefresh
 }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>('feed');
   const [viewingStoryIndex, setViewingStoryIndex] = useState<number | null>(null);
@@ -241,14 +243,10 @@ export const SocialView: React.FC<SocialViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
-  // Load Real Posts
+  // Sync posts when props change (IMPORTANT: Keeps this in sync with App.tsx which handles the refresh)
   useEffect(() => {
-      const fetchPosts = async () => {
-          const data = await api.getSocialPosts();
-          if(data.length > 0) setPosts(data);
-      };
-      fetchPosts();
-  }, []);
+      setPosts(initialPosts);
+  }, [initialPosts]);
 
   // Fetch Comments when viewing a post
   useEffect(() => {
@@ -285,13 +283,17 @@ export const SocialView: React.FC<SocialViewProps> = ({
       if (!newPostText && !newPostImage) return;
       setLoading(true);
       try {
-          await api.createSocialPost(currentUser.id, newPostText, newPostImage || undefined);
+          const newPost = await api.createSocialPost(currentUser.id, newPostText, newPostImage || undefined);
           setNewPostText('');
           setNewPostImage(null);
           setIsCreatingPost(false);
-          // Refresh
-          const data = await api.getSocialPosts();
-          setPosts(data);
+          
+          // Optimistic UI update: Prepend the new post immediately
+          setPosts(prev => [newPost, ...prev]);
+
+          // Trigger a background refresh to sync with DB
+          if(onRefresh) onRefresh();
+
       } catch (e) {
           console.error(e);
           alert("Failed to post");
@@ -345,8 +347,12 @@ export const SocialView: React.FC<SocialViewProps> = ({
       if(!file) return;
       try {
           const type = file.type.startsWith('video') ? 'video' : 'image';
-          await api.uploadStory(file, currentUser.id, type);
+          const newStory = await api.uploadStory(file, currentUser.id, type);
           alert("Story uploaded!");
+          
+          // Trigger refresh in parent to update stories list
+          if(onRefresh) onRefresh();
+          
       } catch (e) { console.error(e); alert("Failed to upload story"); }
   };
 

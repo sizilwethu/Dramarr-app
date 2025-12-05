@@ -90,11 +90,7 @@ export default function App() {
           if (realSeries.length > 0) setSeries(realSeries);
           
           // Fetch Real Stories & Posts
-          const realStories = await api.getStories();
-          if (realStories.length > 0) setStories(realStories);
-          
-          const realPosts = await api.getSocialPosts();
-          if (realPosts.length > 0) setPosts(realPosts);
+          await refreshSocialContent();
 
       } catch (e) {
           console.error("Failed to load content", e);
@@ -434,7 +430,7 @@ export default function App() {
                 posts={posts}
                 onDeletePost={handleDeletePost}
                 onDeleteStory={handleDeleteStory}
-                // Pass a refresh handler if available
+                onRefresh={refreshSocialContent}
             />
         );
       
