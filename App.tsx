@@ -232,8 +232,29 @@ export default function App() {
 
   const handleVideoEnd = () => {
       const displayedVideos = getDisplayedVideos();
-      if (currentVideoIndex < displayedVideos.length - 1) {
-          scrollToVideo(currentVideoIndex + 1);
+      const currentVideo = displayedVideos[currentVideoIndex];
+      
+      if (!currentVideo) return;
+
+      let nextIndex = currentVideoIndex + 1;
+
+      // Smart Series Logic: If part of a series, try to find the next episode in the current feed
+      if (currentVideo.seriesId && currentVideo.episodeNumber) {
+          const nextEpNum = currentVideo.episodeNumber + 1;
+          const seriesMatchIndex = displayedVideos.findIndex(v => 
+              v.seriesId === currentVideo.seriesId && 
+              v.episodeNumber === nextEpNum
+          );
+          
+          // If we found the next episode in the loaded list, jump to it
+          if (seriesMatchIndex !== -1) {
+              nextIndex = seriesMatchIndex;
+          }
+      }
+
+      // Ensure we don't scroll past the end
+      if (nextIndex < displayedVideos.length) {
+          scrollToVideo(nextIndex);
       }
   };
 
