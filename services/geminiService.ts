@@ -1,8 +1,28 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to safely get API Key
+const getApiKey = () => {
+    try {
+        return import.meta.env.VITE_GOOGLE_API_KEY || (process.env as any).API_KEY || '';
+    } catch {
+        return '';
+    }
+}
+
+const apiKey = getApiKey();
+
+// Initialize AI with key or dummy to prevent init crash (calls will fail gracefully)
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy_key' });
 
 export const generateVideoMetadata = async (title: string, userNotes: string): Promise<{ description: string; tags: string[] }> => {
+  if (!apiKey) {
+    console.warn("Gemini API Key missing (VITE_GOOGLE_API_KEY). Skipping AI generation.");
+    return {
+      description: "Check out this amazing drama! ✨",
+      tags: ["drama", "viral", "new"]
+    };
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -36,6 +56,8 @@ export const generateVideoMetadata = async (title: string, userNotes: string): P
 };
 
 export const moderateContent = async (text: string): Promise<boolean> => {
+    if (!apiKey) return true;
+    
     // Returns true if content is safe, false if unsafe
     try {
         const response = await ai.models.generateContent({

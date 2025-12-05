@@ -10,5 +10,9 @@ export default defineConfig({
   },
   server: {
     host: true, // Needed for mobile testing via IP
+  },
+  define: {
+    // Defines process.env as an empty object for libraries that might try to access it
+    'process.env': {}
   }
 });
