@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api'; // Import real API
-import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save, Flag, AlertTriangle } from 'lucide-react';
 
 // --- Story Viewer Overlay Component ---
 const StoryViewer = ({ 
@@ -238,6 +237,11 @@ export const SocialView: React.FC<SocialViewProps> = ({
   const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Reporting State
+  const [postToReport, setPostToReport] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('Spam');
+  const [isReporting, setIsReporting] = useState(false);
+
   // Story Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -323,6 +327,21 @@ export const SocialView: React.FC<SocialViewProps> = ({
           console.error("Failed to edit post", e);
           alert("Failed to save changes");
       }
+  };
+
+  const handleReportPost = async () => {
+      if (!postToReport) return;
+      setIsReporting(true);
+      try {
+          await api.reportPost(currentUser.id, postToReport, reportReason);
+          alert("Thank you for reporting. We will review this post.");
+          setPostToReport(null);
+          setShowMenuId(null);
+      } catch (e) {
+          console.error(e);
+          alert("Failed to report post.");
+      }
+      setIsReporting(false);
   };
 
   const handlePostComment = async () => {
@@ -437,6 +456,38 @@ export const SocialView: React.FC<SocialViewProps> = ({
             currentUserId={currentUser.id}
             onDelete={onDeleteStory}
         />
+      )}
+
+      {/* Report Modal */}
+      {postToReport && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+               <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-sm border border-gray-800">
+                   <div className="flex items-center gap-2 mb-4 text-red-500">
+                       <AlertTriangle size={24} />
+                       <h3 className="text-xl font-bold">Report Post</h3>
+                   </div>
+                   <p className="text-gray-400 text-sm mb-4">Why are you reporting this post?</p>
+                   
+                   <div className="space-y-2 mb-6">
+                       {['Spam', 'Harassment', 'Inappropriate Content', 'Misinformation', 'Other'].map(reason => (
+                           <div 
+                              key={reason} 
+                              onClick={() => setReportReason(reason)}
+                              className={`p-3 rounded-lg cursor-pointer border ${reportReason === reason ? 'bg-red-900/20 border-red-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                           >
+                               {reason}
+                           </div>
+                       ))}
+                   </div>
+                   
+                   <div className="flex gap-3">
+                       <button onClick={() => setPostToReport(null)} className="flex-1 py-3 bg-gray-800 rounded-xl font-bold text-gray-400">Cancel</button>
+                       <button onClick={handleReportPost} disabled={isReporting} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold">
+                           {isReporting ? 'Sending...' : 'Submit Report'}
+                       </button>
+                   </div>
+               </div>
+          </div>
       )}
 
       {/* Comment Modal */}
@@ -642,33 +693,42 @@ export const SocialView: React.FC<SocialViewProps> = ({
                             </div>
                         </div>
                         
-                        {/* Edit/Delete Menu (Only for Owner) */}
-                        {post.userId === currentUser.id && (
-                            <div className="relative">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowMenuId(showMenuId === post.id ? null : post.id); }}
-                                    className="text-gray-500 hover:text-white p-1 rounded-full hover:bg-gray-800"
-                                >
-                                    <MoreHorizontal size={16} />
-                                </button>
-                                {showMenuId === post.id && (
-                                    <div className="absolute right-0 top-8 bg-black border border-gray-800 rounded-lg shadow-xl z-20 w-32 py-1">
+                        {/* More Menu (Edit/Delete for Owner, Report for Others) */}
+                        <div className="relative">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setShowMenuId(showMenuId === post.id ? null : post.id); }}
+                                className="text-gray-500 hover:text-white p-1 rounded-full hover:bg-gray-800"
+                            >
+                                <MoreHorizontal size={16} />
+                            </button>
+                            {showMenuId === post.id && (
+                                <div className="absolute right-0 top-8 bg-black border border-gray-800 rounded-lg shadow-xl z-20 w-32 py-1">
+                                    {post.userId === currentUser.id ? (
+                                        <>
+                                            <button 
+                                                onClick={() => handleStartEditing(post)}
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-900 hover:text-white flex items-center gap-2"
+                                            >
+                                                <Edit2 size={14}/> Edit
+                                            </button>
+                                            <button 
+                                                onClick={() => { onDeletePost(post.id); setShowMenuId(null); }}
+                                                className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-gray-900 flex items-center gap-2"
+                                            >
+                                                <Trash2 size={14}/> Delete
+                                            </button>
+                                        </>
+                                    ) : (
                                         <button 
-                                            onClick={() => handleStartEditing(post)}
-                                            className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-900 hover:text-white flex items-center gap-2"
+                                            onClick={() => { setPostToReport(post.id); setShowMenuId(null); }}
+                                            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-900 flex items-center gap-2"
                                         >
-                                            <Edit2 size={14}/> Edit
+                                            <Flag size={14}/> Report
                                         </button>
-                                        <button 
-                                            onClick={() => { onDeletePost(post.id); setShowMenuId(null); }}
-                                            className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-gray-900 flex items-center gap-2"
-                                        >
-                                            <Trash2 size={14}/> Delete
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Post Content or Edit Form */}

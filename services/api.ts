@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabaseClient';
 import { User, Video, Series, Story, SocialPost, Comment, Message, Conversation } from '../types';
 
@@ -472,6 +471,15 @@ export const api = {
          if(p) {
              await supabase.from('posts').update({ likes: p.likes + 1 }).eq('id', postId);
          }
+    },
+    
+    reportPost: async (userId: string, postId: string, reason: string) => {
+        const { error } = await supabase.from('reports').insert({
+            reporter_id: userId,
+            post_id: postId,
+            reason: reason
+        });
+        if (error) throw error;
     },
 
     // --- COMMENTS ---
