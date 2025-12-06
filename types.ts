@@ -159,6 +159,7 @@ export interface MusicTrack {
     coverUrl: string;
     audioUrl: string;
     duration: string;
+    uploaderId?: string;
 }
 
 export enum TabView {

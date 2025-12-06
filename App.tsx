@@ -507,6 +507,7 @@ export default function App() {
                 isPlaying={isMusicPlaying}
                 onPlayTrack={handlePlayMusic}
                 onPauseTrack={() => setIsMusicPlaying(false)}
+                currentUser={user}
             />
         );
 

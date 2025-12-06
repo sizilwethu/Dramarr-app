@@ -1,5 +1,6 @@
+
 import { supabase } from '../lib/supabaseClient';
-import { User, Video, Series, Story, SocialPost, Comment, Message, Conversation } from '../types';
+import { User, Video, Series, Story, SocialPost, Comment, Message, Conversation, MusicTrack } from '../types';
 
 // --- MAPPERS ---
 
@@ -528,5 +529,53 @@ export const api = {
             parent_id: parentId
         });
         if (error) throw error;
+    },
+
+    // --- MUSIC ---
+    uploadMusicTrack: async (audioFile: File, coverFile: File | null, title: string, artist: string, duration: string, userId: string) => {
+        // 1. Upload Audio
+        const audioExt = audioFile.name.split('.').pop();
+        const audioPath = `tracks/${Date.now()}_${title}.${audioExt}`;
+        const { error: audioErr } = await supabase.storage.from('music').upload(audioPath, audioFile);
+        if(audioErr) throw audioErr;
+        const { data: audioData } = supabase.storage.from('music').getPublicUrl(audioPath);
+
+        // 2. Upload Cover (if any)
+        let coverUrl = 'https://via.placeholder.com/200';
+        if (coverFile) {
+            const coverExt = coverFile.name.split('.').pop();
+            const coverPath = `covers/${Date.now()}_${title}.${coverExt}`;
+            const { error: coverErr } = await supabase.storage.from('music').upload(coverPath, coverFile);
+            if (!coverErr) {
+                const { data: coverData } = supabase.storage.from('music').getPublicUrl(coverPath);
+                coverUrl = coverData.publicUrl;
+            }
+        }
+
+        // 3. Insert Record
+        const { error } = await supabase.from('music_tracks').insert({
+            title,
+            artist,
+            audio_url: audioData.publicUrl,
+            cover_url: coverUrl,
+            duration,
+            uploader_id: userId
+        });
+        if (error) throw error;
+    },
+
+    getMusicTracks: async (): Promise<MusicTrack[]> => {
+        const { data, error } = await supabase.from('music_tracks').select('*').order('created_at', { ascending: false });
+        if (error || !data) return [];
+        
+        return data.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            coverUrl: t.cover_url,
+            audioUrl: t.audio_url,
+            duration: t.duration,
+            uploaderId: t.uploader_id
+        }));
     }
 };
