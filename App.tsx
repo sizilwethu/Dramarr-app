@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift } from 'lucide-react';
+import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { api } from './services/api';
 
 // Types and Data
-import { User, Video, TabView, SocialPost, Story, Series } from './types';
+import { User, Video, TabView, SocialPost, Story, Series, MusicTrack } from './types';
 // Keep Mock Data ONLY for fallbacks/testing UI parts not yet backed by DB (like stories/ads)
 import { MOCK_SERIES, MOCK_SOCIAL_POSTS, MOCK_STORIES, MOCK_VIDEO_ADS } from './services/mockData';
 
@@ -19,6 +19,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { ExploreView } from './components/ExploreView';
 import { DailyRewardView } from './components/DailyRewardView';
 import { InterstitialAd } from './components/InterstitialAd';
+import { MusicView } from './components/MusicView';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -42,6 +43,11 @@ export default function App() {
   // Ad State
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [interstitialShownCount, setInterstitialShownCount] = useState(0);
+
+  // Music State
+  const [currentTrack, setCurrentTrack] = useState<MusicTrack | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(new Audio());
 
   // 1. Check Session & Load Data
   useEffect(() => {
@@ -117,6 +123,28 @@ export default function App() {
           return () => clearTimeout(timer);
       }
   }, [user, interstitialShownCount, isLoading]);
+
+  // Audio Playback Logic
+  useEffect(() => {
+      const audio = audioRef.current;
+      if (currentTrack) {
+          if (audio.src !== currentTrack.audioUrl) {
+              audio.src = currentTrack.audioUrl;
+              audio.load();
+          }
+          if (isMusicPlaying) {
+              audio.play().catch(e => console.log("Audio play error", e));
+          } else {
+              audio.pause();
+          }
+      } else {
+          audio.pause();
+      }
+      
+      return () => {
+          // Cleanup handled by ref
+      };
+  }, [currentTrack, isMusicPlaying]);
 
   // Handle Login (Real Auth)
   const handleLogin = async (email?: string, password?: string, isSignUp?: boolean, username?: string, additionalData?: any) => {
@@ -362,6 +390,13 @@ export default function App() {
       return videos;
   };
 
+  // Music Handlers
+  const handlePlayMusic = (track: MusicTrack) => {
+      setCurrentTrack(track);
+      setIsMusicPlaying(true);
+      // Pause active video if any (managed by UI state mostly, but good conceptual link)
+  };
+
   // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
@@ -385,7 +420,7 @@ export default function App() {
               <div className="absolute top-0 left-0 right-0 z-50 pt-12 flex justify-between items-center px-4 text-white text-shadow-md pointer-events-none">
                   <div className="w-8"></div> {/* Spacer */}
                   
-                  <div className="flex gap-6 pointer-events-auto">
+                  <div className="flex gap-6 pointer-events-auto items-center">
                       <button 
                         onClick={() => setFeedTab('following')}
                         className={`font-bold transition-opacity text-[15px] ${feedTab === 'following' ? 'text-white border-b-2 border-white pb-1' : 'text-gray-400 opacity-80'}`}
@@ -397,6 +432,13 @@ export default function App() {
                         className={`font-bold transition-opacity text-[15px] ${feedTab === 'foryou' ? 'text-white border-b-2 border-white pb-1' : 'text-gray-400 opacity-80'}`}
                       >
                           For You
+                      </button>
+                      {/* Explore Button Added Here */}
+                      <button 
+                        onClick={() => setActiveTab(TabView.EXPLORE)}
+                        className={`font-bold transition-opacity text-[15px] text-gray-400 opacity-80 hover:text-white`}
+                      >
+                          Explore
                       </button>
                   </div>
 
@@ -426,7 +468,7 @@ export default function App() {
                 <div key={video.id} className="h-full w-full snap-start">
                     <VideoPlayer 
                     video={video}
-                    isActive={index === currentVideoIndex}
+                    isActive={index === currentVideoIndex && activeTab === TabView.FEED}
                     isUnlocked={!video.isLocked || user.unlockedVideoIds.includes(video.id)}
                     onUnlock={(cost) => handleUnlockVideo(cost, index)}
                     onWatchAd={handleWatchAd}
@@ -457,6 +499,16 @@ export default function App() {
       
       case TabView.EXPLORE:
         return <ExploreView />;
+        
+      case TabView.MUSIC:
+        return (
+            <MusicView 
+                currentTrack={currentTrack}
+                isPlaying={isMusicPlaying}
+                onPlayTrack={handlePlayMusic}
+                onPauseTrack={() => setIsMusicPlaying(false)}
+            />
+        );
 
       case TabView.UPLOAD:
         return (
@@ -522,6 +574,29 @@ export default function App() {
         {renderContent()}
       </div>
 
+      {/* Mini Player */}
+      {currentTrack && activeTab !== TabView.FEED && (
+          <div className="absolute bottom-[70px] left-0 right-0 bg-gray-900 border-t border-gray-800 p-2 flex items-center justify-between px-4 z-40">
+              <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={`w-10 h-10 rounded bg-gray-800 overflow-hidden ${isMusicPlaying ? 'animate-spin-slow' : ''}`}>
+                      <img src={currentTrack.coverUrl} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                      <p className="font-bold text-sm text-white truncate">{currentTrack.title}</p>
+                      <p className="text-xs text-gray-400 truncate">{currentTrack.artist}</p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-3">
+                  <button onClick={() => setIsMusicPlaying(!isMusicPlaying)} className="text-white hover:scale-110 transition-transform">
+                      {isMusicPlaying ? <Pause fill="white" size={20} /> : <Play fill="white" size={20} />}
+                  </button>
+                  <button onClick={() => { setIsMusicPlaying(false); setCurrentTrack(null); }} className="text-gray-500 hover:text-white">
+                      <X size={20} />
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* Bottom Navigation */}
       {activeTab !== TabView.UPLOAD && activeTab !== TabView.ADMIN && activeTab !== TabView.DAILY_REWARD && (
         <div className="h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 z-50 absolute bottom-0 w-full">
@@ -551,11 +626,11 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => setActiveTab(TabView.EXPLORE)}
-            className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.EXPLORE ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            onClick={() => setActiveTab(TabView.MUSIC)}
+            className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.MUSIC ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
           >
-            <Compass size={22} strokeWidth={activeTab === TabView.EXPLORE ? 3 : 2} />
-            <span className="text-[10px] font-medium">Explore</span>
+            <Music size={22} strokeWidth={activeTab === TabView.MUSIC ? 3 : 2} />
+            <span className="text-[10px] font-medium">Music</span>
           </button>
 
           <button 

@@ -1,5 +1,5 @@
 
-import { User, Video, Series, Story, SocialPost, Message, Notification, Comment, AnalyticsData } from '../types';
+import { User, Video, Series, Story, SocialPost, Message, Notification, Comment, AnalyticsData, MusicTrack } from '../types';
 
 export const CURRENT_USER: User = {
   id: 'u1',
@@ -289,3 +289,38 @@ export const MOCK_ANALYTICS: AnalyticsData = {
         { title: "Midnight Revenge Ep1", views: 45000 },
     ]
 };
+
+export const MOCK_MUSIC_TRACKS: MusicTrack[] = [
+    {
+        id: 'mt1',
+        title: 'Neon Nights',
+        artist: 'Synthwave Boy',
+        coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&h=200&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        duration: '3:45'
+    },
+    {
+        id: 'mt2',
+        title: 'Drama Queen Theme',
+        artist: 'Orchestral Hits',
+        coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&h=200&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        duration: '2:30'
+    },
+    {
+        id: 'mt3',
+        title: 'Suspenseful Beats',
+        artist: 'Dark Mode',
+        coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=200&h=200&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+        duration: '4:10'
+    },
+    {
+        id: 'mt4',
+        title: 'Romantic Piano',
+        artist: 'Soft Keys',
+        coverUrl: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=200&h=200&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+        duration: '3:15'
+    }
+];

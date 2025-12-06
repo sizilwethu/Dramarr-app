@@ -152,11 +152,21 @@ export interface AnalyticsData {
     videoPerformance: { title: string, views: number }[];
 }
 
+export interface MusicTrack {
+    id: string;
+    title: string;
+    artist: string;
+    coverUrl: string;
+    audioUrl: string;
+    duration: string;
+}
+
 export enum TabView {
   AUTH = 'AUTH',
   FEED = 'FEED',
   SOCIAL = 'SOCIAL',
   EXPLORE = 'EXPLORE',
+  MUSIC = 'MUSIC',
   UPLOAD = 'UPLOAD',
   PROFILE = 'PROFILE',
   ADMIN = 'ADMIN',

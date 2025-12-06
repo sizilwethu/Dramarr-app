@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Video, Series } from '../types';
-import { Heart, MessageCircle, Share2, Lock, Play, List, Zap, Disc, Plus, Check, Trash2, Coins, ExternalLink, Copy, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Lock, Play, List, Zap, Disc, Plus, Check, Trash2, Coins, ExternalLink, Copy, X, MoreHorizontal, Flag, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 
 interface VideoPlayerProps {
@@ -37,8 +37,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(video.likes);
-  const [showSeriesDrawer, setShowSeriesDrawer] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showCommentDrawer, setShowCommentDrawer] = useState(false);
   
   // Animation States
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
@@ -82,8 +82,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Pause if not active
       videoRef.current?.pause();
       setIsPlaying(false);
-      setShowSeriesDrawer(false); // Close drawer when scrolling away
       setShowShareModal(false);
+      setShowCommentDrawer(false);
       clearTimeout(viewTimer);
     }
   }, [isActive, isUnlocked, video.isAd, video.id]);
@@ -223,4 +223,178 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <button
               onClick={() => onUnlock(video.unlockCost)}
-              className="w-full bg-gradient-to-r from-neon-purple to-neon-pink text-white font-bold py-3.5 px-6 rounded-xl
+              className="w-full bg-gradient-to-r from-neon-purple to-neon-pink text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-neon-purple/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              <Zap fill="currentColor" size={18} />
+              Unlock ({video.unlockCost} Credits)
+            </button>
+            <button
+              onClick={onWatchAd}
+              className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3.5 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Play size={18} fill="currentColor" />
+              Watch Ad (+1 Credit)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- RIGHT SIDEBAR CONTROLS --- */}
+      <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center z-40 pb-4">
+        
+        {/* Profile Avatar */}
+        <div className="relative mb-2">
+            <div className={`w-12 h-12 rounded-full border-2 ${video.isAd ? 'border-yellow-400' : 'border-white'} p-0.5 overflow-hidden`}>
+                <img src={video.creatorAvatar} className="w-full h-full object-cover rounded-full" />
+            </div>
+            {!isFollowing && !isOwner && !video.isAd && (
+                <button 
+                    onClick={onToggleFollow}
+                    className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-neon-pink text-white rounded-full p-0.5 shadow-md hover:scale-110 transition-transform"
+                >
+                    <Plus size={14} strokeWidth={3} />
+                </button>
+            )}
+            {isFollowing && !isOwner && !video.isAd && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white text-neon-purple rounded-full p-0.5 shadow-md animate-fade-in">
+                    <Check size={14} strokeWidth={3} />
+                </div>
+            )}
+        </div>
+
+        {/* Like Button */}
+        <button 
+            onClick={handleLike} 
+            className="flex flex-col items-center gap-1 group"
+        >
+            <div className={`p-2 rounded-full transition-all ${liked ? 'text-neon-pink' : 'text-white bg-black/20 backdrop-blur-sm'}`}>
+                <Heart 
+                    size={32} 
+                    fill={liked ? "currentColor" : "transparent"} 
+                    strokeWidth={liked ? 0 : 2}
+                    className={`transition-transform duration-200 ${liked ? 'scale-110' : 'scale-100 group-hover:scale-110'}`}
+                />
+            </div>
+            <span className="text-white text-xs font-bold shadow-black drop-shadow-md">
+                {formatCount(likeCount)}
+            </span>
+        </button>
+
+        {/* Comment Button */}
+        <button 
+            onClick={() => setShowCommentDrawer(true)} 
+            className="flex flex-col items-center gap-1 group"
+        >
+            <div className="p-2 rounded-full text-white bg-black/20 backdrop-blur-sm transition-all group-hover:bg-black/40">
+                <MessageCircle size={32} strokeWidth={2} />
+            </div>
+            <span className="text-white text-xs font-bold shadow-black drop-shadow-md">
+                {formatCount(video.comments)}
+            </span>
+        </button>
+
+        {/* Share Button */}
+        <button 
+             onClick={() => setShowShareModal(true)} 
+             className="flex flex-col items-center gap-1 group"
+        >
+            <div className="p-2 rounded-full text-white bg-black/20 backdrop-blur-sm transition-all group-hover:bg-black/40">
+                <Share2 size={32} strokeWidth={2} />
+            </div>
+            <span className="text-white text-xs font-bold shadow-black drop-shadow-md">
+                {formatCount(video.shares)}
+            </span>
+        </button>
+
+        {/* Owner Delete */}
+        {isOwner && (
+            <button 
+                onClick={onDelete} 
+                className="flex flex-col items-center gap-1 group mt-2"
+            >
+                <div className="p-2 rounded-full text-white bg-red-500/80 backdrop-blur-sm transition-all group-hover:bg-red-600">
+                    <Trash2 size={24} />
+                </div>
+            </button>
+        )}
+      </div>
+
+      {/* --- BOTTOM TEXT OVERLAY --- */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
+          <div className="pointer-events-auto max-w-[75%]">
+              <h3 className="text-white font-bold text-lg mb-1 shadow-black drop-shadow-md flex items-center gap-2">
+                  @{video.creatorName}
+                  {video.isAd && <span className="bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">Sponsored</span>}
+              </h3>
+              
+              <div className="text-white text-sm mb-2 shadow-black drop-shadow-md line-clamp-2 leading-relaxed">
+                  {video.description}
+              </div>
+
+              {/* Tags */}
+              {video.tags && video.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                      {video.tags.map((tag, i) => (
+                          <span key={i} className="text-white font-bold text-xs shadow-black drop-shadow-md">#{tag}</span>
+                      ))}
+                  </div>
+              )}
+              
+              {/* Ad CTA Button (If Ad) */}
+              {video.isAd && (
+                   <button 
+                      onClick={handleAdClick}
+                      className="mt-2 bg-blue-600 text-white font-bold text-sm px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 pointer-events-auto"
+                   >
+                       {video.adActionLabel || 'Learn More'} <ExternalLink size={14}/>
+                   </button>
+              )}
+          </div>
+      </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+          <div className="absolute inset-0 bg-black/80 z-50 flex items-end animate-fade-in" onClick={() => setShowShareModal(false)}>
+              <div className="bg-gray-900 w-full rounded-t-2xl p-4 border-t border-gray-800" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-white font-bold mb-4 text-center">Share to</h3>
+                  <div className="grid grid-cols-4 gap-4 mb-4">
+                      <button className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">WA</div>
+                          <span className="text-xs text-gray-400">WhatsApp</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">FB</div>
+                          <span className="text-xs text-gray-400">Facebook</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 bg-sky-400 rounded-full flex items-center justify-center text-white font-bold">TW</div>
+                          <span className="text-xs text-gray-400">Twitter</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2" onClick={handleCopyLink}>
+                          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-white"><Copy size={20}/></div>
+                          <span className="text-xs text-gray-400">Copy Link</span>
+                      </button>
+                  </div>
+                  <button onClick={() => setShowShareModal(false)} className="w-full bg-gray-800 py-3 rounded-xl font-bold text-white">Cancel</button>
+              </div>
+          </div>
+      )}
+
+      {/* Comment Drawer (Placeholder for now, functionality in SocialView usually) */}
+      {showCommentDrawer && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end animate-fade-in" onClick={() => setShowCommentDrawer(false)}>
+             <div className="bg-gray-900 rounded-t-2xl h-[70%] p-4 flex flex-col" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+                      <h3 className="font-bold text-white">Comments ({formatCount(video.comments)})</h3>
+                      <button onClick={() => setShowCommentDrawer(false)}><X className="text-gray-400"/></button>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                      <p>Comments are disabled for this preview.</p>
+                  </div>
+             </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
