@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Video, Series, AdCampaign, CATEGORIES } from '../types';
 import { api } from '../services/api';
-import { Settings, Edit2, Grid, Folder, CreditCard, Shield, ChevronRight, DollarSign, Wallet, Play, FileText, HelpCircle, ArrowLeft, LogOut, User as UserIcon, Camera, Trash2, X, Megaphone, Target, Clock, BarChart3, ExternalLink, Activity, AlertCircle } from 'lucide-react';
+import { Settings, Edit2, Grid, Folder, CreditCard, Shield, ChevronRight, DollarSign, Wallet, Play, FileText, HelpCircle, ArrowLeft, LogOut, User as UserIcon, Camera, Trash2, X, Megaphone, Target, Clock, BarChart3, ExternalLink, Activity, AlertCircle, Lock, Scale, Video as VideoIcon } from 'lucide-react';
 
 interface ProfileViewProps {
   user: User;
@@ -61,6 +61,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Ad State
   const [adForm, setAdForm] = useState({ title: '', imageUrl: '', link: '', budget: 25 });
   const [myCampaigns, setMyCampaigns] = useState<AdCampaign[]>([]);
+
+  // Legal Tabs
+  const [legalTab, setLegalTab] = useState<'tos' | 'privacy'>('tos');
 
   const userVideos = videos.filter(v => v.creatorId === profileUser.id);
   const userSeries = series.filter(s => s.creatorId === profileUser.id);
@@ -382,18 +385,99 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   if (currentView === 'terms') {
       return (
-          <div className="h-full bg-neon-dark pt-12 px-4 pb-20 overflow-y-auto animate-fade-in">
-             <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => setCurrentView('settings')}>
-                  <ArrowLeft size={24} /> <span className="font-bold text-lg">Terms of Service</span>
+          <div className="h-full bg-neon-dark pt-12 px-4 pb-20 overflow-y-auto animate-fade-in flex flex-col">
+             <div className="flex items-center gap-2 mb-4 cursor-pointer flex-shrink-0" onClick={() => setCurrentView('settings')}>
+                  <ArrowLeft size={24} /> <span className="font-bold text-lg">Legal</span>
              </div>
-             <div className="prose prose-invert prose-sm">
-                 <h3>1. Acceptance of Terms</h3>
-                 <p>By accessing dramarr, you agree to be bound by these Terms of Service.</p>
-                 <h3>2. Monetization</h3>
-                 <p>Creators receive a revenue share based on coin unlocks. Withdrawals are subject to review and a $10 minimum threshold.</p>
-                 <h3>3. Content Policy</h3>
-                 <p>Users must not upload illegal, hateful, or explicit content. Violators will be banned.</p>
-                 <p className="text-gray-500 mt-8">Last updated: Oct 2023</p>
+
+             <div className="flex bg-gray-900 p-1 rounded-xl mb-6 flex-shrink-0">
+                 <button 
+                    onClick={() => setLegalTab('tos')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${legalTab === 'tos' ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
+                 >
+                    Terms of Service
+                 </button>
+                 <button 
+                    onClick={() => setLegalTab('privacy')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${legalTab === 'privacy' ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
+                 >
+                    Privacy Policy
+                 </button>
+             </div>
+
+             <div className="flex-1 overflow-y-auto no-scrollbar pr-2">
+                 {legalTab === 'tos' ? (
+                     <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Scale size={18} className="text-neon-purple"/> 1. Acceptance of Terms</h3>
+                             <p>By downloading, installing, or using the dramarr app ("Platform"), you agree to be bound by these Terms of Service. If you do not agree, please do not use the Platform. You must be at least 13 years old to use the Platform. If you are under 18, you represent that you have your parent or guardian's permission to use the Service.</p>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><DollarSign size={18} className="text-yellow-400"/> 2. Virtual Currency & Monetization</h3>
+                             <ul className="list-disc pl-4 space-y-2">
+                                 <li><strong>Credits:</strong> Used to unlock premium content. Can be purchased or earned via ads. Credits have no real-world monetary value and cannot be exchanged for cash.</li>
+                                 <li><strong>Coins:</strong> Earned by creators or via rewards. Coins can be redeemed for real currency subject to our withdrawal thresholds.</li>
+                                 <li><strong>Withdrawals:</strong> Creators may request a payout once their wallet balance reaches 450,000 Coins (equivalent to $10 USD). Dramarr reserves the right to withhold payments for suspicious activity or policy violations.</li>
+                             </ul>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><VideoIcon size={18} className="text-neon-pink"/> 3. User Generated Content (UGC)</h3>
+                             <p>You retain ownership of the content you upload. However, by uploading content to dramarr, you grant us a non-exclusive, worldwide, royalty-free license to host, display, and distribute your content. You represent that you own all rights to your content and that it does not violate any third-party copyrights.</p>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Shield size={18} className="text-red-500"/> 4. Prohibited Conduct</h3>
+                             <p>You agree not to upload content that contains:</p>
+                             <ul className="list-disc pl-4 mt-2 space-y-1">
+                                 <li>Nudity, sexual content, or pornography.</li>
+                                 <li>Hate speech, harassment, or threats.</li>
+                                 <li>Illegal acts or promotion of illegal activities.</li>
+                                 <li>Spam or automated bot activity.</li>
+                             </ul>
+                             <p className="mt-2">We reserve the right to ban any account violating these rules without prior notice.</p>
+                         </div>
+
+                         <p className="text-xs text-gray-500 text-center pt-4">Last Updated: October 25, 2023</p>
+                     </div>
+                 ) : (
+                     <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Activity size={18} className="text-blue-400"/> 1. Information We Collect</h3>
+                             <ul className="list-disc pl-4 space-y-2">
+                                 <li><strong>Account Info:</strong> Username, email, date of birth, and profile picture provided during sign-up.</li>
+                                 <li><strong>Usage Data:</strong> Videos watched, interactions (likes/comments), and time spent on the app.</li>
+                                 <li><strong>Device Data:</strong> IP address, device type, and operating system version. This is used for security and to prevent view count fraud.</li>
+                                 <li><strong>Payment Info:</strong> PayPal email addresses for payouts (we do not store credit card numbers directly; these are handled by third-party processors).</li>
+                             </ul>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Target size={18} className="text-green-400"/> 2. How We Use Your Data</h3>
+                             <p>We use your information to:</p>
+                             <ul className="list-disc pl-4 mt-2 space-y-1">
+                                 <li>Provide and improve the dramarr service.</li>
+                                 <li>Personalize your "For You" feed.</li>
+                                 <li>Process transactions and creator payouts.</li>
+                                 <li>Detect and prevent fraud or abuse.</li>
+                                 <li>Serve relevant advertisements.</li>
+                             </ul>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Lock size={18} className="text-orange-400"/> 3. Data Sharing & Security</h3>
+                             <p>We do not sell your personal data to third parties. We may share data with service providers (e.g., Google Cloud/Supabase for hosting, payment processors) strictly for operational purposes. We implement industry-standard security measures to protect your data, though no method of transmission is 100% secure.</p>
+                         </div>
+
+                         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                             <h3 className="text-white font-bold text-lg mb-2">4. Contact Us</h3>
+                             <p>If you have questions about this Privacy Policy, please contact us at <span className="text-neon-purple">privacy@dramarr.app</span>.</p>
+                         </div>
+
+                         <p className="text-xs text-gray-500 text-center pt-4">Effective Date: October 25, 2023</p>
+                     </div>
+                 )}
              </div>
           </div>
       );
