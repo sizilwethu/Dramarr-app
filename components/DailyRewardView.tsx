@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Video, User } from '../types';
-import { Gift, Lock, Play, Zap, Check } from 'lucide-react';
+import { Gift, Lock, Play, Zap, Check, ChevronLeft } from 'lucide-react';
 
 interface DailyRewardViewProps {
   user: User;
@@ -25,11 +26,14 @@ export const DailyRewardView: React.FC<DailyRewardViewProps> = ({
       
       {/* Header */}
       <div className="px-4 mb-6 flex justify-between items-center">
+        <button onClick={onClose} className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+            <ChevronLeft size={24} /> <span className="font-bold">Back</span>
+        </button>
         <div className="flex items-center gap-2">
             <Gift className="text-yellow-400 w-6 h-6 animate-bounce" />
             <h1 className="text-2xl font-bold text-white">Daily Rewards</h1>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white">Close</button>
+        <div className="w-16"></div> {/* Spacer for symmetry */}
       </div>
 
       <div className="px-4 flex-1 overflow-y-auto">
@@ -98,7 +102,7 @@ export const DailyRewardView: React.FC<DailyRewardViewProps> = ({
                                         </div>
                                         <button 
                                             onClick={() => onPlayVideo(actualIndex)}
-                                            className="bg-neon-pink text-white text-xs font-bold py-2 px-4 rounded-lg mt-1 w-fit"
+                                            className="bg-neon-pink text-white text-xs font-bold py-2 px-4 rounded-lg mt-1 w-fit shadow-md hover:scale-105 transition-transform"
                                         >
                                             Go to Unlock
                                         </button>
@@ -110,7 +114,7 @@ export const DailyRewardView: React.FC<DailyRewardViewProps> = ({
                 })}
             </div>
         ) : (
-            <div className="text-center text-gray-500 py-10">
+            <div className="text-center text-gray-500 py-10 border border-dashed border-gray-800 rounded-3xl">
                 <p>No premium tasks available right now.</p>
             </div>
         )}

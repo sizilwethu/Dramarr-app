@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api';
-import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save, Flag, AlertTriangle } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save, Flag, AlertTriangle, ChevronLeft } from 'lucide-react';
 
 const StoryViewer = ({ stories, startIndex, onClose, currentUserId, onDelete }: { stories: Story[], startIndex: number, onClose: () => void, currentUserId: string, onDelete: (id: string) => void }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -191,7 +191,11 @@ export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: 
             {activeChatPartner ? (
                 <div className="flex-1 flex flex-col bg-gray-900/40 rounded-3xl border border-gray-800 overflow-hidden animate-fade-in">
                     <div className="flex items-center gap-3 p-4 border-b border-gray-800 shrink-0">
-                         <button onClick={() => setActiveChatPartner(null)} className="md:hidden text-gray-400"><ArrowLeft/></button>
+                         <button onClick={() => setActiveChatPartner(null)} className="text-gray-400 hover:text-white transition-colors flex items-center gap-1 group">
+                            <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+                            <span className="text-sm font-bold md:block hidden">Back</span>
+                         </button>
+                         <div className="w-px h-6 bg-gray-800 mx-2 hidden md:block"></div>
                          <img src={activeChatPartner.avatarUrl} className="w-10 h-10 rounded-full object-cover" />
                          <span className="font-bold text-white text-lg">{activeChatPartner.username}</span>
                     </div>

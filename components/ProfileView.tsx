@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Video, Series, AdCampaign, CATEGORIES } from '../types';
 import { api } from '../services/api';
-import { Settings, Edit2, Grid as GridIcon, Folder, CreditCard, Shield, ChevronRight, DollarSign, Wallet, Play, FileText, HelpCircle, ArrowLeft, LogOut, User as UserIcon, Camera, Trash2, X, Megaphone, Target, Clock, BarChart3, ExternalLink, Activity, AlertCircle, Lock, Scale, Video as VideoIcon } from 'lucide-react';
+import { Settings, Edit2, Grid as GridIcon, Folder, CreditCard, Shield, ChevronRight, DollarSign, Wallet, Play, FileText, HelpCircle, ArrowLeft, LogOut, User as UserIcon, Camera, Trash2, X, Megaphone, Target, Clock, BarChart3, ExternalLink, Activity, AlertCircle, Lock, Scale, Video as VideoIcon, ChevronLeft } from 'lucide-react';
 
 interface ProfileViewProps {
   user: User;
@@ -16,9 +16,10 @@ interface ProfileViewProps {
   onRemoveProfilePic: () => void;
   onOpenAnalytics: () => void;
   viewingUserId?: string;
+  onBack?: () => void;
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, viewingUserId }) => {
+export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, viewingUserId, onBack }) => {
   const [activeTab, setActiveTab] = useState<'grid' | 'series'>('grid');
   const [profileUser, setProfileUser] = useState<User>(currentUser);
   const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id;
@@ -33,6 +34,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
 
   return (
     <div className="h-full bg-black md:pt-10 pb-20 flex flex-col animate-fade-in max-w-6xl mx-auto w-full overflow-y-auto">
+      
+      {/* Back Button for non-root profile views */}
+      {!isOwnProfile && (
+          <div className="px-6 md:px-12 mb-4">
+              <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                  <ChevronLeft size={24} /> <span className="font-bold">Back</span>
+              </button>
+          </div>
+      )}
+
       <div className="px-6 md:px-12 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8 shrink-0">
         <div className="relative shrink-0">
             <img src={profileUser.avatarUrl} className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-neon-purple object-cover shadow-2xl" />

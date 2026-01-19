@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MusicTrack, User } from '../types';
 import { api } from '../services/api';
 import { MOCK_MUSIC_TRACKS } from '../services/mockData';
-import { Play, Pause, Music, Disc, Heart, MoreHorizontal, Search, Upload, CheckCircle, FileAudio, Image as ImageIcon } from 'lucide-react';
+import { Play, Pause, Music, Disc, Heart, MoreHorizontal, Search, Upload, CheckCircle, FileAudio, Image as ImageIcon, ChevronLeft } from 'lucide-react';
 
 interface MusicViewProps {
     currentTrack: MusicTrack | null;
@@ -191,6 +191,12 @@ export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, o
                 </div>
             ) : (
                 <div className="flex-1 overflow-y-auto px-4 pb-10">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => setActiveTab('browse')} className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+                            <ChevronLeft size={20} /> <span className="text-sm font-bold">Back to Browse</span>
+                        </button>
+                    </div>
+
                     <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
                         <div className="text-center mb-6">
                             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
