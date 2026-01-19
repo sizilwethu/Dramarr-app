@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X, LayoutGrid, Settings, LogOut, Search } from 'lucide-react';
+import { App as CapApp } from '@capacitor/app';
 import { supabase } from './lib/supabaseClient';
 import { api } from './services/api';
 
@@ -41,6 +42,36 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<MusicTrack | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(new Audio());
+
+  // Ref to track nested state for hardware back button logic
+  const nestedStateRef = useRef({
+    hasActiveChat: false,
+    setHasActiveChat: (val: boolean) => { nestedStateRef.current.hasActiveChat = val; }
+  });
+
+  // Hardware Back Button Listener
+  useEffect(() => {
+    const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      // Prioritize internal navigation over app closure
+      if (activeTab === TabView.ADMIN) {
+        setActiveTab(TabView.PROFILE);
+      } else if (activeTab === TabView.SOCIAL && nestedStateRef.current.hasActiveChat) {
+        // This is a bit of a hack since we're not using a real router, 
+        // but we'll manually trigger the chat close in SocialView if we could.
+        // For now, if they are in social, we'll just go back to the feed for safety.
+        setActiveTab(TabView.FEED);
+      } else if (activeTab !== TabView.FEED && activeTab !== TabView.AUTH) {
+        setActiveTab(TabView.FEED);
+      } else if (activeTab === TabView.FEED) {
+        // On the home screen, let the default behavior happen (minimize/exit)
+        // If we want to strictly NOT close, we would call exitApp() only on double tap or something.
+      }
+    });
+
+    return () => {
+      backListener.then(l => l.remove());
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -210,7 +241,6 @@ export default function App() {
         const displayedVideos = getDisplayedVideos();
         return (
           <div className="relative h-full w-full bg-black overflow-hidden flex flex-col">
-              {/* Centered Tab Switcher */}
               <div className="absolute top-0 left-0 right-0 z-50 pt-12 md:pt-6 flex justify-center items-center px-4 text-white pointer-events-none">
                   <div className="flex gap-6 pointer-events-auto items-center bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-2xl">
                       <button onClick={() => setFeedTab('following')} className={`font-bold transition-opacity text-[15px] ${feedTab === 'following' ? 'text-white' : 'text-gray-400 opacity-80'}`}>Following</button>
@@ -219,7 +249,6 @@ export default function App() {
                   </div>
               </div>
               
-              {/* Full Width Scrollable Container */}
               <div ref={feedContainerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black">
                 {displayedVideos.map((video, index) => (
                     <div key={video.id} className="h-full w-full snap-start flex justify-center bg-[#050505]">
@@ -242,7 +271,7 @@ export default function App() {
               </div>
           </div>
         );
-      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={refreshSocialContent} onBack={goHome} />;
+      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={refreshSocialContent} onBack={goHome} onChatStateChange={nestedStateRef.current.setHasActiveChat} />;
       case TabView.EXPLORE: return <ExploreView onBack={goHome} />;
       case TabView.MUSIC: return <MusicView currentTrack={currentTrack} isPlaying={isMusicPlaying} onPlayTrack={(t) => { setCurrentTrack(t); setIsMusicPlaying(true); }} onPauseTrack={() => setIsMusicPlaying(false)} currentUser={user} onBack={goHome} />;
       case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} onBack={goHome} />;
@@ -255,7 +284,6 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#050505] text-white flex overflow-hidden">
-      {/* DESKTOP SIDEBAR */}
       <nav className="hidden md:flex flex-col w-20 lg:w-64 border-r border-gray-900 p-4 gap-8 bg-black shrink-0">
         <div className="px-3 py-4">
            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink hidden lg:block">dramarr</h1>
@@ -292,7 +320,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* MAIN VIEW AREA */}
       <main className="flex-1 relative flex flex-col overflow-hidden">
         {showInterstitial && <InterstitialAd onClose={() => setShowInterstitial(false)} />}
         
@@ -300,7 +327,6 @@ export default function App() {
             {renderContent()}
         </div>
 
-        {/* MINI PLAYER (ADAPTIVE) */}
         {currentTrack && activeTab !== TabView.FEED && (
           <div className="absolute bottom-20 md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-40 shadow-2xl">
               <div className="flex items-center gap-4 overflow-hidden">
@@ -323,7 +349,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MOBILE BOTTOM NAV */}
         <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[10px]">Social</span></button>

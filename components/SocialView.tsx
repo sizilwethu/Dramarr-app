@@ -80,7 +80,16 @@ const StoryViewer = ({ stories, startIndex, onClose, currentUserId, onDelete }: 
   );
 };
 
-export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: SocialPost[], onDeletePost: (id: string) => void, onDeleteStory: (id: string) => void, onRefresh?: () => void, onBack: () => void }> = ({ currentUser, stories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack }) => {
+export const SocialView: React.FC<{ 
+  currentUser: User, 
+  stories: Story[], 
+  posts: SocialPost[], 
+  onDeletePost: (id: string) => void, 
+  onDeleteStory: (id: string) => void, 
+  onRefresh?: () => void, 
+  onBack: () => void,
+  onChatStateChange?: (isActive: boolean) => void 
+}> = ({ currentUser, stories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack, onChatStateChange }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>('feed');
   const [viewingStoryIndex, setViewingStoryIndex] = useState<number | null>(null);
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
@@ -94,6 +103,11 @@ export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: 
   useEffect(() => { if(activeTab === 'inbox') api.getConversations(currentUser.id).then(setConversations); }, [activeTab, currentUser.id]);
   useEffect(() => { if(activeChatPartner) api.getMessages(currentUser.id, activeChatPartner.id).then(setMessages); }, [activeChatPartner, currentUser.id]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  
+  // Sync chat state with parent for hardware back button logic
+  useEffect(() => {
+    onChatStateChange?.(!!activeChatPartner);
+  }, [activeChatPartner, onChatStateChange]);
 
   const handleSendMessage = async () => {
       if(!activeChatPartner || !chatInput.trim()) return;

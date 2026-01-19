@@ -73,16 +73,15 @@
       /* AGGRESSIVE: Hide all scrollbars globally on Mobile (< 768px) */
       @media (max-width: 767px) {
         * {
-          -ms-overflow-style: none !important;  /* IE and Edge */
-          scrollbar-width: none !important;    /* Firefox */
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
         }
         *::-webkit-scrollbar {
-          display: none !important;            /* Chrome, Safari and Opera */
+          display: none !important;
           width: 0 !important;
           height: 0 !important;
         }
         
-        /* Ensure touch scrolling remains smooth even without visible bars */
         .overflow-y-scroll {
           -webkit-overflow-scrolling: touch;
         }
@@ -104,6 +103,8 @@
     "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.86.2",
     "vite": "https://aistudiocdn.com/vite@^7.2.6",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "@capacitor/core": "https://aistudiocdn.com/@capacitor/core@^6.2.0",
+    "@capacitor/app": "https://aistudiocdn.com/@capacitor/app@^6.0.2",
     "@capacitor/cli": "https://aistudiocdn.com/@capacitor/cli@^7.4.4"
   }
 }
