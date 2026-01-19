@@ -80,7 +80,7 @@ const StoryViewer = ({ stories, startIndex, onClose, currentUserId, onDelete }: 
   );
 };
 
-export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: SocialPost[], onDeletePost: (id: string) => void, onDeleteStory: (id: string) => void, onRefresh?: () => void }> = ({ currentUser, stories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh }) => {
+export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: SocialPost[], onDeletePost: (id: string) => void, onDeleteStory: (id: string) => void, onRefresh?: () => void, onBack: () => void }> = ({ currentUser, stories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>('feed');
   const [viewingStoryIndex, setViewingStoryIndex] = useState<number | null>(null);
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
@@ -108,9 +108,14 @@ export const SocialView: React.FC<{ currentUser: User, stories: Story[], posts: 
     <div className="h-full flex flex-col bg-black md:pt-6 pb-20 max-w-7xl mx-auto w-full overflow-hidden">
       {viewingStoryIndex !== null && <StoryViewer stories={stories} startIndex={viewingStoryIndex} onClose={() => setViewingStoryIndex(null)} currentUserId={currentUser.id} onDelete={onDeleteStory} />}
 
-      <div className="flex items-center justify-start gap-8 px-8 mb-8 z-10 relative shrink-0">
-        <button onClick={() => setActiveTab('feed')} className={`text-2xl font-bold transition-all ${activeTab === 'feed' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Discover</button>
-        <button onClick={() => setActiveTab('inbox')} className={`text-2xl font-bold transition-all ${activeTab === 'inbox' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Inbox</button>
+      <div className="flex items-center justify-start gap-8 px-4 md:px-8 mb-8 z-10 relative shrink-0">
+        <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft size={28} />
+        </button>
+        <div className="flex items-center gap-8">
+            <button onClick={() => setActiveTab('feed')} className={`text-2xl font-bold transition-all ${activeTab === 'feed' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Discover</button>
+            <button onClick={() => setActiveTab('inbox')} className={`text-2xl font-bold transition-all ${activeTab === 'inbox' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Inbox</button>
+        </div>
       </div>
 
       {activeTab === 'feed' ? (

@@ -11,9 +11,10 @@ interface MusicViewProps {
     onPlayTrack: (track: MusicTrack) => void;
     onPauseTrack: () => void;
     currentUser?: User;
+    onBack: () => void;
 }
 
-export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, onPlayTrack, onPauseTrack, currentUser }) => {
+export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, onPlayTrack, onPauseTrack, currentUser, onBack }) => {
     const [activeTab, setActiveTab] = useState<'browse' | 'upload'>('browse');
     const [searchTerm, setSearchTerm] = useState('');
     const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -80,7 +81,10 @@ export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, o
         <div className="h-full bg-neon-dark pt-12 pb-24 flex flex-col animate-fade-in">
             {/* Header */}
             <div className="px-4 mb-4">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-4 mb-4">
+                    <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
+                        <ChevronLeft size={28} />
+                    </button>
                     <h1 className="text-3xl font-bold text-white flex items-center gap-2">
                         <Music className="text-neon-pink" /> Music
                     </h1>

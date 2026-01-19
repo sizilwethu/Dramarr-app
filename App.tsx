@@ -202,6 +202,8 @@ export default function App() {
     </button>
   );
 
+  const goHome = () => setActiveTab(TabView.FEED);
+
   const renderContent = () => {
     switch (activeTab) {
       case TabView.FEED:
@@ -240,12 +242,12 @@ export default function App() {
               </div>
           </div>
         );
-      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={refreshSocialContent} />;
-      case TabView.EXPLORE: return <ExploreView />;
-      case TabView.MUSIC: return <MusicView currentTrack={currentTrack} isPlaying={isMusicPlaying} onPlayTrack={(t) => { setCurrentTrack(t); setIsMusicPlaying(true); }} onPauseTrack={() => setIsMusicPlaying(false)} currentUser={user} />;
-      case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} />;
-      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={handleLogout} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => handleOpenCreatorStudio('analytics')} />;
-      case TabView.DAILY_REWARD: return <DailyRewardView user={user} videos={videos} onClose={() => setActiveTab(TabView.FEED)} onWatchAd={() => {}} onPlayVideo={() => setActiveTab(TabView.FEED)} />;
+      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={refreshSocialContent} onBack={goHome} />;
+      case TabView.EXPLORE: return <ExploreView onBack={goHome} />;
+      case TabView.MUSIC: return <MusicView currentTrack={currentTrack} isPlaying={isMusicPlaying} onPlayTrack={(t) => { setCurrentTrack(t); setIsMusicPlaying(true); }} onPauseTrack={() => setIsMusicPlaying(false)} currentUser={user} onBack={goHome} />;
+      case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} onBack={goHome} />;
+      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={handleLogout} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => handleOpenCreatorStudio('analytics')} onBack={goHome} />;
+      case TabView.DAILY_REWARD: return <DailyRewardView user={user} videos={videos} onClose={goHome} onWatchAd={() => {}} onPlayVideo={() => setActiveTab(TabView.FEED)} />;
       case TabView.ADMIN: return <AdminDashboard onClose={() => setActiveTab(TabView.PROFILE)} />;
       default: return null;
     }

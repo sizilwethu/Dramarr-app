@@ -16,7 +16,7 @@ interface ProfileViewProps {
   onRemoveProfilePic: () => void;
   onOpenAnalytics: () => void;
   viewingUserId?: string;
-  onBack?: () => void;
+  onBack: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, viewingUserId, onBack }) => {
@@ -35,14 +35,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
   return (
     <div className="h-full bg-black md:pt-10 pb-20 flex flex-col animate-fade-in max-w-6xl mx-auto w-full overflow-y-auto">
       
-      {/* Back Button for non-root profile views */}
-      {!isOwnProfile && (
-          <div className="px-6 md:px-12 mb-4">
-              <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
-                  <ChevronLeft size={24} /> <span className="font-bold">Back</span>
-              </button>
-          </div>
-      )}
+      {/* Universal Back Button */}
+      <div className="px-6 md:px-12 mb-4">
+          <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+              <ChevronLeft size={28} /> <span className="font-bold">Back</span>
+          </button>
+      </div>
 
       <div className="px-6 md:px-12 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8 shrink-0">
         <div className="relative shrink-0">

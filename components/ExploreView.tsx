@@ -1,10 +1,14 @@
 
 import React, { useState } from 'react';
-import { Search, Flame, TrendingUp, Play, Grid } from 'lucide-react';
+import { Search, Flame, TrendingUp, Play, Grid, ChevronLeft } from 'lucide-react';
 import { MOCK_SERIES, MOCK_VIDEOS } from '../services/mockData';
 import { CATEGORIES } from '../types';
 
-export const ExploreView: React.FC = () => {
+interface ExploreViewProps {
+    onBack: () => void;
+}
+
+export const ExploreView: React.FC<ExploreViewProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -18,7 +22,12 @@ export const ExploreView: React.FC = () => {
       
       {/* Search Bar */}
       <div className="px-4 md:px-8 mb-6 shrink-0">
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Explore</h1>
+        <div className="flex items-center gap-4 mb-4">
+            <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
+                <ChevronLeft size={28} />
+            </button>
+            <h1 className="text-3xl md:text-4xl font-bold text-white">Explore</h1>
+        </div>
         <div className="relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 max-w-2xl">
             <Search className="absolute left-4 top-4 text-gray-500 w-5 h-5" />
             <input 

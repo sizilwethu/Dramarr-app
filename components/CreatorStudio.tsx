@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Upload, Sparkles, X, Check, Film, FolderPlus, Lock, BarChart3, Eye, Heart, TrendingUp } from 'lucide-react';
+import { Upload, Sparkles, X, Check, Film, FolderPlus, Lock, BarChart3, Eye, Heart, TrendingUp, ChevronLeft } from 'lucide-react';
 import { generateVideoMetadata } from '../services/geminiService';
 import { MOCK_SERIES } from '../services/mockData';
 import { api } from '../services/api'; // Import real API
@@ -12,9 +12,10 @@ interface CreatorStudioProps {
   user: User;
   videos: Video[];
   initialMode?: 'episode' | 'series' | 'analytics';
+  onBack: () => void;
 }
 
-export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'episode' }) => {
+export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'episode', onBack }) => {
   const [mode, setMode] = useState<'episode' | 'series' | 'analytics'>(initialMode);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,7 +93,12 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
   return (
     <div className="flex flex-col h-full bg-black text-white pb-20 pt-12 animate-fade-in">
       <div className="flex justify-between items-center px-4 mb-6">
-        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink">Studio</h2>
+        <div className="flex items-center gap-3">
+            <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
+                <ChevronLeft size={28} />
+            </button>
+            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink">Studio</h2>
+        </div>
         <button onClick={onClose} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-colors"><X size={20} /></button>
       </div>
 
