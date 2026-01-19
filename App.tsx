@@ -56,15 +56,12 @@ export default function App() {
       if (activeTab === TabView.ADMIN) {
         setActiveTab(TabView.PROFILE);
       } else if (activeTab === TabView.SOCIAL && nestedStateRef.current.hasActiveChat) {
-        // This is a bit of a hack since we're not using a real router, 
-        // but we'll manually trigger the chat close in SocialView if we could.
-        // For now, if they are in social, we'll just go back to the feed for safety.
-        setActiveTab(TabView.FEED);
+        // Fallback to social list if in a chat
+        setActiveTab(TabView.SOCIAL);
       } else if (activeTab !== TabView.FEED && activeTab !== TabView.AUTH) {
         setActiveTab(TabView.FEED);
       } else if (activeTab === TabView.FEED) {
         // On the home screen, let the default behavior happen (minimize/exit)
-        // If we want to strictly NOT close, we would call exitApp() only on double tap or something.
       }
     });
 
@@ -249,7 +246,7 @@ export default function App() {
                   </div>
               </div>
               
-              <div ref={feedContainerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black">
+              <div ref={feedContainerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black no-scrollbar">
                 {displayedVideos.map((video, index) => (
                     <div key={video.id} className="h-full w-full snap-start flex justify-center bg-[#050505]">
                         <div className="h-full w-full md:max-w-md border-x border-gray-900 shadow-2xl relative">
@@ -284,6 +281,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#050505] text-white flex overflow-hidden">
+      {/* DESKTOP SIDEBAR */}
       <nav className="hidden md:flex flex-col w-20 lg:w-64 border-r border-gray-900 p-4 gap-8 bg-black shrink-0">
         <div className="px-3 py-4">
            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink hidden lg:block">dramarr</h1>
@@ -320,15 +318,18 @@ export default function App() {
         </div>
       </nav>
 
+      {/* MAIN VIEW AREA */}
       <main className="flex-1 relative flex flex-col overflow-hidden">
         {showInterstitial && <InterstitialAd onClose={() => setShowInterstitial(false)} />}
         
-        <div className="flex-1 relative h-full">
+        {/* Content Area - Fixed Flex sizing */}
+        <div className="flex-1 relative overflow-hidden">
             {renderContent()}
         </div>
 
+        {/* MINI PLAYER (ADAPTIVE) */}
         {currentTrack && activeTab !== TabView.FEED && (
-          <div className="absolute bottom-20 md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-40 shadow-2xl">
+          <div className="absolute bottom-20 md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-[60] shadow-2xl">
               <div className="flex items-center gap-4 overflow-hidden">
                   <div className={`w-12 h-12 rounded-lg bg-gray-800 overflow-hidden shadow-lg ${isMusicPlaying ? 'animate-spin-slow' : ''}`}>
                       <img src={currentTrack.coverUrl} className="w-full h-full object-cover" />
@@ -349,6 +350,7 @@ export default function App() {
           </div>
         )}
 
+        {/* MOBILE BOTTOM NAV - Correctly positioned at the bottom of the flex column */}
         <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[10px]">Social</span></button>
