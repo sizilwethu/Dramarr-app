@@ -217,11 +217,11 @@ export default function App() {
                   </div>
               </div>
               
-              {/* Full Width Scrollable Container to catch mouse wheel anywhere */}
+              {/* Full Width Scrollable Container */}
               <div ref={feedContainerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black">
                 {displayedVideos.map((video, index) => (
                     <div key={video.id} className="h-full w-full snap-start flex justify-center bg-[#050505]">
-                        <div className="h-full w-full max-w-md border-x border-gray-900 shadow-2xl relative">
+                        <div className="h-full w-full md:max-w-md border-x border-gray-900 shadow-2xl relative">
                             <VideoPlayer 
                                 video={video}
                                 isActive={index === currentVideoIndex && activeTab === TabView.FEED}
@@ -322,7 +322,7 @@ export default function App() {
         )}
 
         {/* MOBILE BOTTOM NAV */}
-        <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 z-50 shrink-0">
+        <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[10px]">Social</span></button>
           <button onClick={() => handleOpenCreatorStudio()} className="flex flex-col items-center justify-center -mt-6"><div className="w-14 h-14 bg-gradient-to-tr from-neon-purple to-neon-pink rounded-full flex items-center justify-center shadow-lg border-4 border-black"><PlusCircle size={28} className="text-white" /></div></button>
