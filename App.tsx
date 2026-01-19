@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X, LayoutGrid, Settings, LogOut, Search } from 'lucide-react';
+import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X, LayoutGrid, Settings, LogOut, Search, RotateCcw } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { supabase } from './lib/supabaseClient';
 import { api } from './services/api';
@@ -21,27 +21,46 @@ import { DailyRewardView } from './components/DailyRewardView';
 import { InterstitialAd } from './components/InterstitialAd';
 import { MusicView } from './components/MusicView';
 
+const PERSISTENCE_KEY_TAB = 'dramarr_active_tab';
+const PERSISTENCE_KEY_FEED = 'dramarr_feed_tab';
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<TabView>(TabView.AUTH);
+  const [activeTab, setActiveTab] = useState<TabView>(() => {
+    const saved = localStorage.getItem(PERSISTENCE_KEY_TAB);
+    return (saved as TabView) || TabView.AUTH;
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [videos, setVideos] = useState<Video[]>([]);
   const [series, setSeries] = useState<Series[]>(MOCK_SERIES);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   
-  const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou');
+  const [feedTab, setFeedTab] = useState<'foryou' | 'following'>(() => {
+    return (localStorage.getItem(PERSISTENCE_KEY_FEED) as 'foryou' | 'following') || 'foryou';
+  });
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const feedContainerRef = useRef<HTMLDivElement>(null);
 
   const [studioMode, setStudioMode] = useState<'episode' | 'series' | 'analytics'>('episode');
   const [showInterstitial, setShowInterstitial] = useState(false);
-  const [interstitialShownCount, setInterstitialShownCount] = useState(0);
 
   const [currentTrack, setCurrentTrack] = useState<MusicTrack | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(new Audio());
+
+  // Persistence Effects
+  useEffect(() => {
+    if (activeTab !== TabView.AUTH) {
+      localStorage.setItem(PERSISTENCE_KEY_TAB, activeTab);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem(PERSISTENCE_KEY_FEED, feedTab);
+  }, [feedTab]);
 
   // Ref to track nested state for hardware back button logic
   const nestedStateRef = useRef({
@@ -52,16 +71,12 @@ export default function App() {
   // Hardware Back Button Listener
   useEffect(() => {
     const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      // Prioritize internal navigation over app closure
       if (activeTab === TabView.ADMIN) {
         setActiveTab(TabView.PROFILE);
       } else if (activeTab === TabView.SOCIAL && nestedStateRef.current.hasActiveChat) {
-        // Fallback to social list if in a chat
         setActiveTab(TabView.SOCIAL);
       } else if (activeTab !== TabView.FEED && activeTab !== TabView.AUTH) {
         setActiveTab(TabView.FEED);
-      } else if (activeTab === TabView.FEED) {
-        // On the home screen, let the default behavior happen (minimize/exit)
       }
     });
 
@@ -77,7 +92,8 @@ export default function App() {
             const currentUser = await api.getCurrentUser();
             if (currentUser) {
                 setUser(currentUser);
-                setActiveTab(TabView.FEED);
+                // If we were on AUTH but have a session, move to FEED or saved tab
+                if (activeTab === TabView.AUTH) setActiveTab(TabView.FEED);
                 await loadContent();
             } else {
                 setActiveTab(TabView.AUTH);
@@ -112,6 +128,14 @@ export default function App() {
       } catch (e) {
           console.error("Failed to load content", e);
       }
+  };
+
+  const handleManualRefresh = async () => {
+      if (isRefreshing) return;
+      setIsRefreshing(true);
+      await loadContent();
+      // Artificial delay for visual feedback if refresh is too fast
+      setTimeout(() => setIsRefreshing(false), 800);
   };
 
   const refreshSocialContent = async () => {
@@ -165,6 +189,8 @@ export default function App() {
     await api.signOut();
     setUser(null);
     setActiveTab(TabView.AUTH);
+    localStorage.removeItem(PERSISTENCE_KEY_TAB);
+    localStorage.removeItem(PERSISTENCE_KEY_FEED);
   };
 
   const handleScroll = () => {
@@ -239,10 +265,14 @@ export default function App() {
         return (
           <div className="relative h-full w-full bg-black overflow-hidden flex flex-col">
               <div className="absolute top-0 left-0 right-0 z-50 pt-12 md:pt-6 flex justify-center items-center px-4 text-white pointer-events-none">
-                  <div className="flex gap-6 pointer-events-auto items-center bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-2xl">
+                  <div className="flex gap-4 pointer-events-auto items-center bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-2xl">
                       <button onClick={() => setFeedTab('following')} className={`font-bold transition-opacity text-[15px] ${feedTab === 'following' ? 'text-white' : 'text-gray-400 opacity-80'}`}>Following</button>
                       <button onClick={() => setFeedTab('foryou')} className={`font-bold transition-opacity text-[15px] ${feedTab === 'foryou' ? 'text-white' : 'text-gray-400 opacity-80'}`}>For You</button>
-                      <button onClick={() => setActiveTab(TabView.DAILY_REWARD)} className="text-yellow-400 ml-2 animate-bounce"><Gift size={20} /></button>
+                      <div className="w-px h-4 bg-white/20"></div>
+                      <button onClick={handleManualRefresh} className={`text-gray-400 hover:text-white transition-all ${isRefreshing ? 'animate-spin' : ''}`}>
+                          <RotateCcw size={16} />
+                      </button>
+                      <button onClick={() => setActiveTab(TabView.DAILY_REWARD)} className="text-yellow-400 animate-bounce"><Gift size={20} /></button>
                   </div>
               </div>
               
@@ -268,7 +298,7 @@ export default function App() {
               </div>
           </div>
         );
-      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={refreshSocialContent} onBack={goHome} onChatStateChange={nestedStateRef.current.setHasActiveChat} />;
+      case TabView.SOCIAL: return <SocialView currentUser={user} stories={stories} posts={posts} onDeletePost={() => {}} onDeleteStory={() => {}} onRefresh={handleManualRefresh} onBack={goHome} onChatStateChange={nestedStateRef.current.setHasActiveChat} />;
       case TabView.EXPLORE: return <ExploreView onBack={goHome} />;
       case TabView.MUSIC: return <MusicView currentTrack={currentTrack} isPlaying={isMusicPlaying} onPlayTrack={(t) => { setCurrentTrack(t); setIsMusicPlaying(true); }} onPauseTrack={() => setIsMusicPlaying(false)} currentUser={user} onBack={goHome} />;
       case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} onBack={goHome} />;
@@ -281,7 +311,6 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#050505] text-white flex overflow-hidden">
-      {/* DESKTOP SIDEBAR */}
       <nav className="hidden md:flex flex-col w-20 lg:w-64 border-r border-gray-900 p-4 gap-8 bg-black shrink-0">
         <div className="px-3 py-4">
            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink hidden lg:block">dramarr</h1>
@@ -318,16 +347,13 @@ export default function App() {
         </div>
       </nav>
 
-      {/* MAIN VIEW AREA */}
       <main className="flex-1 relative flex flex-col overflow-hidden">
         {showInterstitial && <InterstitialAd onClose={() => setShowInterstitial(false)} />}
         
-        {/* Content Area - Fixed Flex sizing */}
         <div className="flex-1 relative overflow-hidden">
             {renderContent()}
         </div>
 
-        {/* MINI PLAYER (ADAPTIVE) */}
         {currentTrack && activeTab !== TabView.FEED && (
           <div className="absolute bottom-20 md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-[60] shadow-2xl">
               <div className="flex items-center gap-4 overflow-hidden">
@@ -350,7 +376,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MOBILE BOTTOM NAV - Correctly positioned at the bottom of the flex column */}
         <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[10px]">Social</span></button>

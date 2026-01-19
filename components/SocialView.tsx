@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api';
-import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save, Flag, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, Search, MoreHorizontal, Video as VideoIcon, X, Play, Pause, Trash2, ExternalLink, Image as ImageIcon, Reply, Eye, ArrowLeft, PenSquare, Edit2, Save, Flag, AlertTriangle, ChevronLeft, RotateCcw } from 'lucide-react';
 
 const StoryViewer = ({ stories, startIndex, onClose, currentUserId, onDelete }: { stories: Story[], startIndex: number, onClose: () => void, currentUserId: string, onDelete: (id: string) => void }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -97,6 +97,7 @@ export const SocialView: React.FC<{
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setPosts(initialPosts); }, [initialPosts]);
@@ -108,6 +109,13 @@ export const SocialView: React.FC<{
   useEffect(() => {
     onChatStateChange?.(!!activeChatPartner);
   }, [activeChatPartner, onChatStateChange]);
+
+  const handleManualRefresh = async () => {
+      if (isRefreshing || !onRefresh) return;
+      setIsRefreshing(true);
+      await onRefresh();
+      setTimeout(() => setIsRefreshing(false), 800);
+  };
 
   const handleSendMessage = async () => {
       if(!activeChatPartner || !chatInput.trim()) return;
@@ -122,19 +130,27 @@ export const SocialView: React.FC<{
     <div className="h-full flex flex-col bg-black md:pt-6 pb-20 max-w-7xl mx-auto w-full overflow-hidden">
       {viewingStoryIndex !== null && <StoryViewer stories={stories} startIndex={viewingStoryIndex} onClose={() => setViewingStoryIndex(null)} currentUserId={currentUser.id} onDelete={onDeleteStory} />}
 
-      <div className="flex items-center justify-start gap-8 px-4 md:px-8 mb-8 z-10 relative shrink-0">
-        <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
-            <ChevronLeft size={28} />
-        </button>
-        <div className="flex items-center gap-8">
-            <button onClick={() => setActiveTab('feed')} className={`text-2xl font-bold transition-all ${activeTab === 'feed' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Discover</button>
-            <button onClick={() => setActiveTab('inbox')} className={`text-2xl font-bold transition-all ${activeTab === 'inbox' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Inbox</button>
+      <div className="flex items-center justify-between gap-8 px-4 md:px-8 mb-8 z-10 relative shrink-0">
+        <div className="flex items-center gap-4">
+            <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
+                <ChevronLeft size={28} />
+            </button>
+            <div className="flex items-center gap-8">
+                <button onClick={() => setActiveTab('feed')} className={`text-2xl font-bold transition-all ${activeTab === 'feed' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Discover</button>
+                <button onClick={() => setActiveTab('inbox')} className={`text-2xl font-bold transition-all ${activeTab === 'inbox' ? 'text-white border-b-4 border-neon-purple pb-1' : 'text-gray-600 hover:text-gray-400'}`}>Inbox</button>
+            </div>
         </div>
+        
+        {activeTab === 'feed' && (
+            <button onClick={handleManualRefresh} className={`text-gray-400 hover:text-white transition-all p-2 bg-gray-900 rounded-full border border-gray-800 ${isRefreshing ? 'animate-spin' : ''}`}>
+                <RotateCcw size={18} />
+            </button>
+        )}
       </div>
 
       {activeTab === 'feed' ? (
         <div className="flex-1 flex flex-col md:flex-row gap-8 px-8 overflow-hidden">
-          <div className="flex-1 overflow-y-auto pb-10">
+          <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
               <div className="flex gap-4 py-2 overflow-x-auto no-scrollbar mb-8">
                 <div className="flex flex-col items-center gap-2 min-w-[80px]">
                     <div className="w-[72px] h-[72px] rounded-full border-2 border-dashed border-gray-700 flex items-center justify-center bg-gray-900 cursor-pointer hover:border-neon-purple">
