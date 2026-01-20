@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   username: string;
@@ -66,7 +67,7 @@ export interface Video {
   adDestinationUrl?: string;
   choices?: VideoChoice[];
   isPremiere?: boolean;
-  premiereTime?: number; // timestamp
+  premiereTime?: number;
   dramaScore?: number;
 }
 
@@ -108,6 +109,13 @@ export interface Story {
   isAd?: boolean;
 }
 
+export interface PlotPoll {
+    id: string;
+    question: string;
+    options: { label: string; votes: number }[];
+    totalVotes: number;
+}
+
 export interface SocialPost {
   id: string;
   userId: string;
@@ -122,6 +130,7 @@ export interface SocialPost {
   isAd?: boolean;
   adActionLabel?: string;
   isTheory?: boolean;
+  poll?: PlotPoll;
 }
 
 export interface Message {
@@ -164,34 +173,13 @@ export interface Notification {
   relatedUserId?: string;
 }
 
-export interface AnalyticsData {
-  totalViews: number;
-  totalLikes: number;
-  revenue: number;
-  videoPerformance: { title: string; views: number }[];
+export interface CommunityMood {
+    label: string;
+    percentage: number;
+    color: string;
 }
 
-export interface MusicTrack {
-  id: string;
-  title: string;
-  artist: string;
-  coverUrl: string;
-  audioUrl: string;
-  duration: string;
-  uploaderId?: string;
-}
-
-export interface AdCampaign {
-  id: string;
-  userId: string;
-  title: string;
-  imageUrl: string;
-  budget: number;
-  impressions: number;
-  clicks: number;
-  status: 'active' | 'expired' | 'pending';
-}
-
+// Fixed: TabView changed to enum for value usage and added missing interfaces
 export enum TabView {
   AUTH = 'AUTH',
   FEED = 'FEED',
@@ -204,6 +192,34 @@ export enum TabView {
   DAILY_REWARD = 'DAILY_REWARD',
   AD_CENTER = 'AD_CENTER',
   CHARACTER_CHAT = 'CHARACTER_CHAT'
+}
+
+export interface MusicTrack {
+  id: string;
+  title: string;
+  artist: string;
+  coverUrl: string;
+  audioUrl: string;
+  duration: string;
+  uploaderId?: string;
+}
+
+export interface AnalyticsData {
+  totalViews: number;
+  totalLikes: number;
+  revenue: number;
+  videoPerformance: { title: string; views: number }[];
+}
+
+export interface AdCampaign {
+  id: string;
+  userId: string;
+  title: string;
+  imageUrl: string;
+  budget: number;
+  impressions: number;
+  clicks: number;
+  status: 'active' | 'expired' | 'pending';
 }
 
 export const CATEGORIES = ['Romance', 'Thriller', 'CEO', 'Fantasy', 'Comedy', 'Revenge'];
