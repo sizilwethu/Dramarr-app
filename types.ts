@@ -25,13 +25,20 @@ export interface User {
   subscriptionRenewsAt?: number;
   dailyPremiumUnlockCount: number;
   lastPremiumUnlockDate: string;
-  rank?: number; // Added for leaderboard
-  points?: number; // Added for leaderboard
+  rank?: number;
+  points?: number;
 }
 
 export interface VideoChoice {
     label: string;
     targetVideoId: string;
+}
+
+export interface Gift {
+    id: string;
+    name: string;
+    icon: string;
+    cost: number;
 }
 
 export interface Video {
@@ -57,7 +64,21 @@ export interface Video {
   isAd?: boolean;
   adActionLabel?: string;
   adDestinationUrl?: string;
-  choices?: VideoChoice[]; // Added for interactive plot choices
+  choices?: VideoChoice[];
+}
+
+export interface AICharacter {
+    id: string;
+    name: string;
+    seriesId: string;
+    avatarUrl: string;
+    description: string;
+    personality: string; // Used as system instruction for Gemini
+}
+
+export interface TheoryPost extends SocialPost {
+    isTheory: true;
+    truthScore: number;
 }
 
 export interface Series {
@@ -97,6 +118,7 @@ export interface SocialPost {
   timestamp: string;
   isAd?: boolean;
   adActionLabel?: string;
+  isTheory?: boolean;
 }
 
 export interface Message {
@@ -106,6 +128,7 @@ export interface Message {
   content: string;
   timestamp: number;
   isRead: boolean;
+  isAI?: boolean;
 }
 
 export interface Conversation {
@@ -115,53 +138,55 @@ export interface Conversation {
     lastMessage: string;
     timestamp: number;
     unreadCount: number;
+    isAI?: boolean;
+}
+
+export interface Comment {
+  id: string;
+  userId: string;
+  username: string;
+  avatarUrl: string;
+  text: string;
+  timestamp: number;
+  parentId?: string;
+  replies?: Comment[];
 }
 
 export interface Notification {
   id: string;
-  type: 'like' | 'follow' | 'comment' | 'system' | 'payout';
+  type: string;
   message: string;
-  relatedUserId?: string;
   read: boolean;
   timestamp: number;
-}
-
-export interface Comment {
-    id: string;
-    userId: string;
-    username: string;
-    avatarUrl: string;
-    text: string;
-    timestamp: number;
-    replies?: Comment[];
-}
-
-export interface AdCampaign {
-    id: string;
-    userId: string;
-    imageUrl: string;
-    title: string;
-    budget: number;
-    impressions: number;
-    clicks: number;
-    status: 'active' | 'expired';
+  relatedUserId?: string;
 }
 
 export interface AnalyticsData {
-    totalViews: number;
-    totalLikes: number;
-    revenue: number;
-    videoPerformance: { title: string, views: number }[];
+  totalViews: number;
+  totalLikes: number;
+  revenue: number;
+  videoPerformance: { title: string; views: number }[];
 }
 
 export interface MusicTrack {
-    id: string;
-    title: string;
-    artist: string;
-    coverUrl: string;
-    audioUrl: string;
-    duration: string;
-    uploaderId?: string;
+  id: string;
+  title: string;
+  artist: string;
+  coverUrl: string;
+  audioUrl: string;
+  duration: string;
+  uploaderId?: string;
+}
+
+export interface AdCampaign {
+  id: string;
+  userId: string;
+  title: string;
+  imageUrl: string;
+  budget: number;
+  impressions: number;
+  clicks: number;
+  status: 'active' | 'expired' | 'pending';
 }
 
 export enum TabView {
@@ -174,7 +199,15 @@ export enum TabView {
   PROFILE = 'PROFILE',
   ADMIN = 'ADMIN',
   DAILY_REWARD = 'DAILY_REWARD',
-  AD_CENTER = 'AD_CENTER'
+  AD_CENTER = 'AD_CENTER',
+  CHARACTER_CHAT = 'CHARACTER_CHAT'
 }
 
 export const CATEGORIES = ['Romance', 'Thriller', 'CEO', 'Fantasy', 'Comedy', 'Revenge'];
+
+export const VIRTUAL_GIFTS: Gift[] = [
+    { id: 'g1', name: 'Golden Rose', icon: '🌹', cost: 10 },
+    { id: 'g2', name: 'Script Award', icon: '📜', cost: 50 },
+    { id: 'g3', name: 'Director Chair', icon: '💺', cost: 100 },
+    { id: 'g4', name: 'Hollywood Star', icon: '⭐', cost: 500 },
+];

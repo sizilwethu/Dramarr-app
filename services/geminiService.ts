@@ -1,24 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getApiKey = () => {
-    try {
-        // @ts-ignore
-        const meta = import.meta as any;
-        return meta.env?.VITE_GOOGLE_API_KEY || (process.env as any).API_KEY || '';
-    } catch {
-        return '';
-    }
-}
-
-const apiKey = getApiKey();
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy_key' });
-
+/* Standard Gemini initialization following guidelines. Always initializing inside the function. */
 export const generateVideoMetadata = async (title: string, userNotes: string): Promise<{ description: string; tags: string[] }> => {
-  if (!apiKey) {
-    return { description: "Check out this amazing drama! ✨", tags: ["drama", "viral", "new"] };
-  }
-
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -45,12 +30,12 @@ export const generateVideoMetadata = async (title: string, userNotes: string): P
   }
 };
 
+/* Using gemini-3-pro-preview for script generation which involves creative reasoning. */
 export const generateScriptPrompt = async (concept: string): Promise<{ script: string, scenes: string[] }> => {
-    if (!apiKey) return { script: "Concept: " + concept, scenes: ["Scene 1: Introduction"] };
-
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview',
             contents: `Write a cinematic script outline for a short vertical drama (Tiktok/Reels style) based on this concept: "${concept}". 
             Include dramatic dialogue and 3 specific scene breakdowns.`,
             config: {
@@ -71,8 +56,9 @@ export const generateScriptPrompt = async (concept: string): Promise<{ script: s
     }
 };
 
+/* Content moderation using Flash for fast throughput. */
 export const moderateContent = async (text: string): Promise<boolean> => {
-    if (!apiKey) return true;
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
