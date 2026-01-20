@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   username: string;
@@ -28,6 +27,41 @@ export interface User {
   lastPremiumUnlockDate: string;
   rank?: number;
   points?: number;
+  // Settings & Drive Fields
+  screenTimeLimit?: number;
+  dataSaverMode?: boolean;
+  aiMemoryEnabled?: boolean;
+  payoutThreshold?: number;
+  payoutStatus?: 'verified' | 'pending' | 'unlinked';
+  highDefinitionPlayback?: boolean;
+  isDriver?: boolean;
+  driverRating?: number;
+  vehicleModel?: string;
+  currentRideId?: string;
+  // New Industrial Preference Fields
+  accessibilityCaptions?: boolean;
+  highContrastMode?: boolean;
+  hapticFeedbackStrength?: 'none' | 'low' | 'high';
+  appLanguage?: string;
+  autoClearCache?: boolean;
+}
+
+export type RideStatus = 'REQUESTING' | 'SEARCHING' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'COMPLETED' | 'CANCELLED';
+
+export interface RideRequest {
+    id: string;
+    passengerId: string;
+    passengerName: string;
+    passengerAvatar: string;
+    driverId?: string;
+    driverName?: string;
+    driverAvatar?: string;
+    pickupLocation: string;
+    destination: string;
+    fare: number;
+    status: RideStatus;
+    timestamp: number;
+    vehicleType: 'Standard' | 'Director' | 'Superstar';
 }
 
 export interface VideoChoice {
@@ -179,7 +213,6 @@ export interface CommunityMood {
     color: string;
 }
 
-// Fixed: TabView changed to enum for value usage and added missing interfaces
 export enum TabView {
   AUTH = 'AUTH',
   FEED = 'FEED',
@@ -191,7 +224,8 @@ export enum TabView {
   ADMIN = 'ADMIN',
   DAILY_REWARD = 'DAILY_REWARD',
   AD_CENTER = 'AD_CENTER',
-  CHARACTER_CHAT = 'CHARACTER_CHAT'
+  CHARACTER_CHAT = 'CHARACTER_CHAT',
+  DRIVE = 'DRIVE'
 }
 
 export interface MusicTrack {
