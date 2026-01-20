@@ -1,7 +1,7 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 
-/* Standard Gemini initialization following guidelines. Always initializing inside the function. */
+// Standard Gemini initialization following guidelines
 export const generateVideoMetadata = async (title: string, userNotes: string): Promise<{ description: string; tags: string[] }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
@@ -30,7 +30,31 @@ export const generateVideoMetadata = async (title: string, userNotes: string): P
   }
 };
 
-/* Using gemini-3-pro-preview for script generation which involves creative reasoning. */
+export const generateVoiceover = async (text: string, voiceName: 'Zephyr' | 'Puck' | 'Kore' | 'Charon'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Say with dramatic intensity: ${text}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName },
+            },
+        },
+      },
+    });
+    
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) throw new Error("Audio generation failed");
+    return base64Audio;
+  } catch (error) {
+    console.error("TTS Error:", error);
+    throw error;
+  }
+};
+
 export const generateScriptPrompt = async (concept: string): Promise<{ script: string, scenes: string[] }> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
@@ -56,7 +80,6 @@ export const generateScriptPrompt = async (concept: string): Promise<{ script: s
     }
 };
 
-/* Content moderation using Flash for fast throughput. */
 export const moderateContent = async (text: string): Promise<boolean> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {

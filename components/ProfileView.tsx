@@ -99,18 +99,59 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
         );
       case 'privacy':
         return (
-          <div className="animate-fade-in text-gray-400 text-sm leading-relaxed space-y-4">
-            <h3 className="text-white font-bold text-lg">dramarr Privacy Policy</h3>
-            <p>Effective Date: October 2023</p>
-            <p>At dramarr, we respect your privacy and are committed to protecting your personal data. This policy outlines how we collect, use, and safeguard your information when you use our platform.</p>
-            <h4 className="text-white font-bold">1. Data Collection</h4>
-            <p>We collect information you provide directly to us, such as your username, email, and content you upload. We also collect usage data to improve your experience.</p>
-            <h4 className="text-white font-bold">2. How We Use Data</h4>
-            <p>Your data is used to personalize your feed, process rewards, and facilitate social interactions within the community.</p>
-            <h4 className="text-white font-bold">3. Data Sharing</h4>
-            <p>We do not sell your personal information. We may share data with service providers who help us operate our platform.</p>
-            <div className="p-4 bg-gray-900/50 rounded-xl border border-white/5 mt-8">
-              <p className="text-xs italic">For full legal inquiries, please contact legal@dramarr.app</p>
+          <div className="animate-fade-in text-gray-400 text-sm leading-relaxed space-y-6 pb-20">
+            <div className="bg-neon-purple/10 border border-neon-purple/30 p-6 rounded-3xl mb-8">
+                <h3 className="text-white font-black text-2xl uppercase tracking-tighter mb-2">Dramarr Privacy Charter</h3>
+                <p className="text-[10px] text-neon-purple font-black uppercase tracking-[0.3em]">Version 2.1 • Enhanced AI Protection</p>
+            </div>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                    <Shield size={14} className="text-neon-purple" /> 1. Data Stewardship
+                </h4>
+                <p>At dramarr ("the Platform"), we operate on a principle of radical transparency. This policy governs how personal identifiers, content uploads, and generative AI interactions are processed across our ecosystem.</p>
+            </section>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest">2. Information Collection</h4>
+                <div className="pl-4 border-l border-gray-800 space-y-4">
+                    <p><strong className="text-gray-300 italic">User-Provided Data:</strong> Registration requires an email address, legal birth date, and geographic region. For creators, additional tax identification and financial routing numbers (PayPal/Stripe) are collected for payout processing.</p>
+                    <p><strong className="text-gray-300 italic">Generative AI Interactions:</strong> Inputs provided to our AI Character Chat or Voice Studio (Gemini-integrated) are processed in real-time. We do not use these specific inputs to train long-term model weights, though they are stored for moderation and safety compliance.</p>
+                    <p><strong className="text-gray-300 italic">Biometric Data:</strong> For verified creator status, we may utilize third-party identity verification services that process biometric facial vectors. Dramarr does not store raw biometric data on its primary servers.</p>
+                </div>
+            </section>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest">3. Advanced Processing & AI Ethics</h4>
+                <p>Our Platform utilizes automated algorithms to determine "Drama Scores," visibility metrics, and content recommendations. We are committed to preventing algorithmic bias and provide users with manual "Reset Feed" controls in the Feed settings.</p>
+            </section>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest">4. Your Global Rights (GDPR/CCPA/LGPD)</h4>
+                <ul className="list-disc pl-5 space-y-2">
+                    <li><strong className="text-gray-300">Right to Portability:</strong> You may request a machine-readable export of all uploaded video metadata.</li>
+                    <li><strong className="text-gray-300">Right to Erasure:</strong> Account deletion triggers a 14-day "Cool-Down" period, after which all PII is scrubbed from production databases. Content hosted on edge CDNs may persist for up to 30 days.</li>
+                    <li><strong className="text-gray-300">Opt-Out of Profiling:</strong> You can disable personalized ad tracking in the Ad Center dashboard.</li>
+                </ul>
+            </section>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest">5. Data Retention & Security</h4>
+                <p>All data is encrypted in transit via TLS 1.3 and at rest using AES-256 standards. Financial transactions are processed via PCI-DSS Level 1 compliant partners. We retain server logs for 90 days for forensic security purposes.</p>
+            </section>
+
+            <section className="space-y-3">
+                <h4 className="text-white font-black uppercase text-xs tracking-widest">6. Contact & Legal Inquiry</h4>
+                <p>For inquiries regarding data protection, please contact our Data Protection Officer (DPO) at:</p>
+                <div className="bg-gray-900 p-4 rounded-xl border border-white/5 text-xs">
+                    <p className="font-bold text-white mb-1 uppercase tracking-widest">Legal & Compliance Dept.</p>
+                    <p>legal@dramarr.app</p>
+                    <p>Attn: DPO / Privacy Compliance</p>
+                </div>
+            </section>
+
+            <div className="p-10 border-t border-gray-900 text-center">
+                <p className="text-[10px] text-gray-600 font-bold uppercase">End of Privacy Charter • (C) 2024 Dramarr Inc.</p>
             </div>
           </div>
         );
@@ -187,7 +228,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
           )}
           <h2 className="text-2xl font-black text-white">
             {currentSubPage === 'profile' ? 'Edit Profile' : 
-             currentSubPage === 'privacy' ? 'Privacy Policy' :
+             currentSubPage === 'privacy' ? 'Privacy Charter' :
              currentSubPage === 'region' ? 'Region & Language' : 'Settings'}
           </h2>
         </div>
@@ -201,7 +242,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
         
         {!currentSubPage && (
           <div className="text-center mt-10 pb-10">
-            <p className="text-[10px] text-gray-700 font-bold tracking-widest uppercase">dramarr v1.0.4</p>
+            <p className="text-[10px] text-gray-700 font-bold tracking-widest uppercase">dramarr v2.1.0</p>
           </div>
         )}
       </div>
@@ -239,7 +280,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
           {/* Universal Header */}
           <div className="px-6 md:px-12 mb-4 flex justify-between items-center">
               <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
-                  <ChevronLeft size={28} /> <span className="font-bold">Back</span>
+                  <ChevronLeft size={28} /> <span className="font-bold uppercase text-xs tracking-widest">Back</span>
               </button>
               
               <div className="flex items-center gap-3">
@@ -280,29 +321,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
             
             <div className="flex-1 text-center md:text-left">
                 <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-                    <h2 className="text-3xl font-black text-white">@{profileUser.username}</h2>
+                    <h2 className="text-3xl font-black text-white italic tracking-tighter">@{profileUser.username}</h2>
                     <div className="flex gap-3 justify-center">
                         {isOwnProfile ? (
                             <>
-                                <button onClick={() => setIsSettingsOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2 rounded-xl text-sm transition-all">Edit Profile</button>
-                                <button onClick={onOpenAnalytics} className="bg-purple-900/40 text-purple-400 font-bold px-6 py-2 rounded-xl text-sm border border-purple-500/30 flex items-center gap-2 hover:bg-purple-900/60 transition-all"><BarChart3 size={16}/> Analytics</button>
+                                <button onClick={() => setIsSettingsOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all">Edit Profile</button>
+                                <button onClick={onOpenAnalytics} className="bg-purple-900/40 text-purple-400 font-bold px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-purple-500/30 flex items-center gap-2 hover:bg-purple-900/60 transition-all"><BarChart3 size={16}/> Analytics</button>
                             </>
                         ) : (
-                            <button className="bg-neon-pink text-white font-bold px-10 py-2 rounded-xl text-sm shadow-lg shadow-neon-pink/20 hover:scale-105 transition-transform">Follow</button>
+                            <button className="bg-neon-pink text-white font-bold px-10 py-2 rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-neon-pink/20 hover:scale-105 transition-transform">Follow</button>
                         )}
                     </div>
                 </div>
                 
                 <div className="flex justify-center md:justify-start gap-8 mb-6">
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.followers}</span><span className="text-gray-500 text-sm">followers</span></div>
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.following.length}</span><span className="text-gray-500 text-sm">following</span></div>
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">12.5k</span><span className="text-gray-500 text-sm">likes</span></div>
+                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.followers}</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">followers</span></div>
+                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.following.length}</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">following</span></div>
+                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">12.5k</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">likes</span></div>
                 </div>
                 
                 <p className="text-gray-400 text-lg leading-relaxed max-w-2xl mb-6">{profileUser.bio || "No bio yet."}</p>
 
                 {/* Restored Personal Info Block */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-900/40 rounded-2xl border border-gray-800/50 max-w-2xl">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-900/40 rounded-3xl border border-gray-800/50 max-w-2xl">
                     <div className="flex items-center gap-2 text-gray-400">
                         <Calendar size={14} className="text-neon-purple" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(profileUser.joinDate).toLocaleDateString()}</span>
@@ -322,15 +363,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
           </div>
 
           <div className="flex border-t border-gray-900 sticky top-0 bg-black z-20">
-            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'grid' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('grid')}><GridIcon size={20} /> <span className="font-bold uppercase tracking-widest text-xs">Episodes</span></button>
-            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'series' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('series')}><Folder size={20} /> <span className="font-bold uppercase tracking-widest text-xs">Series</span></button>
+            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'grid' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('grid')}><GridIcon size={20} /> <span className="font-black uppercase tracking-[0.2em] text-[10px]">Episodes</span></button>
+            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'series' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('series')}><Folder size={20} /> <span className="font-black uppercase tracking-[0.2em] text-[10px]">Series</span></button>
           </div>
 
           <div className="p-4">
             {activeTab === 'grid' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {userVideos.map(v => (
-                        <div key={v.id} className="relative aspect-[3/4] bg-gray-900 rounded-2xl overflow-hidden group cursor-pointer border border-gray-800 shadow-lg">
+                        <div key={v.id} className="relative aspect-[3/4] bg-gray-900 rounded-3xl overflow-hidden group cursor-pointer border border-white/5 shadow-lg">
                              <img src={v.thumbnailUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
                                  <div className="flex items-center gap-2 text-white font-bold text-xs"><Play size={12} fill="white" /> {v.likes} likes</div>
@@ -341,13 +382,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
             ) : (
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                      {userSeries.map(s => (
-                         <div key={s.id} className="bg-gray-900/40 rounded-3xl overflow-hidden border border-gray-800 hover:bg-gray-800 transition-all cursor-pointer group flex">
+                         <div key={s.id} className="bg-gray-900/40 rounded-[40px] overflow-hidden border border-white/5 hover:bg-gray-800 transition-all cursor-pointer group flex">
                              <div className="w-32 aspect-[3/4] relative shrink-0">
                                  <img src={s.coverUrl} className="w-full h-full object-cover" />
                              </div>
                              <div className="p-6 flex flex-col justify-center min-w-0">
                                  <h4 className="font-bold text-white text-xl truncate mb-1 group-hover:text-neon-purple transition-colors">{s.title}</h4>
-                                 <p className="text-gray-500 text-sm mb-2">{s.category} • {s.totalEpisodes} Episodes</p>
+                                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-2">{s.category} • {s.totalEpisodes} Eps</p>
                                  <div className="bg-gray-800/50 w-fit px-3 py-1 rounded-full text-[10px] text-gray-400 font-bold uppercase tracking-widest">{s.year}</div>
                              </div>
                          </div>

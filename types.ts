@@ -65,6 +65,9 @@ export interface Video {
   adActionLabel?: string;
   adDestinationUrl?: string;
   choices?: VideoChoice[];
+  isPremiere?: boolean;
+  premiereTime?: number; // timestamp
+  dramaScore?: number;
 }
 
 export interface AICharacter {
@@ -73,7 +76,7 @@ export interface AICharacter {
     seriesId: string;
     avatarUrl: string;
     description: string;
-    personality: string; // Used as system instruction for Gemini
+    personality: string;
 }
 
 export interface TheoryPost extends SocialPost {
