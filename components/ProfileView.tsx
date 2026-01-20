@@ -1,8 +1,12 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { User, Video, Series, AdCampaign, CATEGORIES } from '../types';
+import React, { useState, useEffect } from 'react';
+import { User, Video, Series, CATEGORIES } from '../types';
 import { api } from '../services/api';
-import { Settings, Edit2, Grid as GridIcon, Folder, CreditCard, Shield, ChevronRight, DollarSign, Wallet, Play, FileText, HelpCircle, ArrowLeft, LogOut, User as UserIcon, Camera, Trash2, X, Megaphone, Target, Clock, BarChart3, ExternalLink, Activity, AlertCircle, Lock, Scale, Video as VideoIcon, ChevronLeft } from 'lucide-react';
+import { 
+  Settings, Grid as GridIcon, Folder, Play, BarChart3, ChevronLeft, 
+  LogOut, User as UserIcon, Camera, Trash2, X, Shield, Bell, 
+  CreditCard, HelpCircle, ChevronRight, Globe, Lock, Mail
+} from 'lucide-react';
 
 interface ProfileViewProps {
   user: User;
@@ -19,9 +23,87 @@ interface ProfileViewProps {
   onBack: () => void;
 }
 
+const SettingsModal = ({ user, onClose, onLogout }: { user: User, onClose: () => void, onLogout: () => void }) => {
+  const SettingItem = ({ icon: Icon, label, value, onClick, color = "text-gray-400" }: any) => (
+    <button 
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-4 bg-gray-900/50 hover:bg-gray-800 transition-colors rounded-2xl mb-2 border border-white/5"
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-2 rounded-xl bg-gray-800 ${color}`}>
+          <Icon size={20} />
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-bold text-white">{label}</p>
+          {value && <p className="text-xs text-gray-500">{value}</p>}
+        </div>
+      </div>
+      <ChevronRight size={18} className="text-gray-600" />
+    </button>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl animate-fade-in flex flex-col">
+      <div className="p-6 flex justify-between items-center border-b border-white/10 shrink-0">
+        <h2 className="text-2xl font-black text-white">Settings</h2>
+        <button onClick={onClose} className="p-2 bg-gray-800 rounded-full text-white">
+          <X size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+        <div className="mb-8">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Account</h3>
+          <SettingItem icon={UserIcon} label="Edit Profile" value={`@${user.username}`} />
+          <SettingItem icon={Mail} label="Email Address" value={user.email} />
+          <SettingItem icon={Lock} label="Password & Security" />
+          <SettingItem icon={Globe} label="Region & Language" value={user.country || "Not set"} />
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Notifications</h3>
+          <SettingItem icon={Bell} label="Push Notifications" value="Enabled" />
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Billing</h3>
+          <SettingItem icon={CreditCard} label="Payment Methods" />
+          <SettingItem icon={Shield} label="Subscription Plan" value={user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'} />
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Support</h3>
+          <SettingItem icon={HelpCircle} label="Help Center" />
+          <SettingItem icon={Shield} label="Privacy Policy" />
+        </div>
+
+        <div className="mt-12 space-y-3">
+          <button 
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-2xl transition-all border border-red-500/20"
+          >
+            <LogOut size={20} /> Log Out
+          </button>
+          <button 
+            onClick={() => { if(confirm("Are you sure? This is permanent.")) alert("Account deleted"); }}
+            className="w-full flex items-center justify-center gap-3 p-4 text-gray-600 hover:text-red-600 font-bold rounded-2xl transition-all text-xs"
+          >
+            <Trash2 size={14} /> Delete Account
+          </button>
+        </div>
+        
+        <div className="text-center mt-10 pb-10">
+          <p className="text-[10px] text-gray-700 font-bold tracking-widest uppercase">dramarr v1.0.4</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, viewingUserId, onBack }) => {
   const [activeTab, setActiveTab] = useState<'grid' | 'series'>('grid');
   const [profileUser, setProfileUser] = useState<User>(currentUser);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id;
 
   const userVideos = videos.filter(v => v.creatorId === profileUser.id);
@@ -34,6 +116,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
 
   return (
     <div className="h-full bg-black overflow-y-auto animate-fade-in no-scrollbar">
+      {isSettingsOpen && (
+        <SettingsModal 
+          user={currentUser} 
+          onClose={() => setIsSettingsOpen(false)} 
+          onLogout={onLogout} 
+        />
+      )}
+      
       <div className="max-w-6xl mx-auto w-full pt-12 md:pt-10 pb-10">
           
           {/* Universal Header */}
@@ -44,8 +134,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
               
               {isOwnProfile && (
                 <button 
-                  onClick={() => alert("Settings coming soon!")}
-                  className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg active:scale-90"
                 >
                   <Settings size={24} />
                 </button>
