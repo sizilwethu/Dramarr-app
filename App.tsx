@@ -92,7 +92,6 @@ export default function App() {
             const currentUser = await api.getCurrentUser();
             if (currentUser) {
                 setUser(currentUser);
-                // If we were on AUTH but have a session, move to FEED or saved tab
                 if (activeTab === TabView.AUTH) setActiveTab(TabView.FEED);
                 await loadContent();
             } else {
@@ -134,7 +133,6 @@ export default function App() {
       if (isRefreshing) return;
       setIsRefreshing(true);
       await loadContent();
-      // Artificial delay for visual feedback if refresh is too fast
       setTimeout(() => setIsRefreshing(false), 800);
   };
 
@@ -239,7 +237,7 @@ export default function App() {
   };
 
   if (isLoading) {
-      return <div className="h-[100dvh] w-full bg-black flex items-center justify-center text-white">Loading dramarr...</div>
+      return <div className="h-[100dvh] w-full bg-black flex items-center justify-center text-white font-bold">dramarr</div>
   }
 
   if (!user || activeTab === TabView.AUTH) {
@@ -311,6 +309,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#050505] text-white flex overflow-hidden">
+      {/* DESKTOP SIDEBAR */}
       <nav className="hidden md:flex flex-col w-20 lg:w-64 border-r border-gray-900 p-4 gap-8 bg-black shrink-0">
         <div className="px-3 py-4">
            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-pink hidden lg:block">dramarr</h1>
@@ -347,15 +346,18 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="flex-1 relative flex flex-col overflow-hidden">
+      {/* MAIN VIEW AREA */}
+      <main className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
         {showInterstitial && <InterstitialAd onClose={() => setShowInterstitial(false)} />}
         
-        <div className="flex-1 relative overflow-hidden">
+        {/* Content Container - Flex 1 handles taking up space between optional player and navbar */}
+        <div className="flex-1 relative min-h-0">
             {renderContent()}
         </div>
 
+        {/* MINI PLAYER (ABSOLUTE BOTTOM-FLOATING) */}
         {currentTrack && activeTab !== TabView.FEED && (
-          <div className="absolute bottom-20 md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-[60] shadow-2xl">
+          <div className="absolute bottom-[80px] md:bottom-6 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-gray-800 p-3 rounded-2xl flex items-center justify-between px-6 z-[60] shadow-2xl">
               <div className="flex items-center gap-4 overflow-hidden">
                   <div className={`w-12 h-12 rounded-lg bg-gray-800 overflow-hidden shadow-lg ${isMusicPlaying ? 'animate-spin-slow' : ''}`}>
                       <img src={currentTrack.coverUrl} className="w-full h-full object-cover" />
@@ -376,6 +378,7 @@ export default function App() {
           </div>
         )}
 
+        {/* MOBILE BOTTOM NAV - Fixed Height, Shrink 0 ensures it's never compressed */}
         <div className="md:hidden h-[70px] bg-black/95 backdrop-blur-md border-t border-gray-900 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[10px]">Social</span></button>
