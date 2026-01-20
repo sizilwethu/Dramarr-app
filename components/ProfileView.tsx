@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { 
   Settings, Grid as GridIcon, Folder, Play, BarChart3, ChevronLeft, 
   LogOut, User as UserIcon, Camera, Trash2, X, Shield, Bell, 
-  CreditCard, HelpCircle, ChevronRight, Globe, Lock, Mail
+  CreditCard, HelpCircle, ChevronRight, Globe, Lock, Mail, Save, CheckCircle
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -23,7 +23,27 @@ interface ProfileViewProps {
   onBack: () => void;
 }
 
-const SettingsModal = ({ user, onClose, onLogout }: { user: User, onClose: () => void, onLogout: () => void }) => {
+const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, onClose: () => void, onLogout: () => void, onUpdateUser: (d: any) => void }) => {
+  const [currentSubPage, setCurrentSubPage] = useState<string | null>(null);
+  
+  // Edit Profile States
+  const [editUsername, setEditUsername] = useState(user.username);
+  const [editBio, setEditBio] = useState(user.bio);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await api.updateProfile(user.id, { username: editUsername, bio: editBio });
+      onUpdateUser({ username: editUsername, bio: editBio });
+      setCurrentSubPage(null);
+    } catch (e) {
+      alert("Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const SettingItem = ({ icon: Icon, label, value, onClick, color = "text-gray-400" }: any) => (
     <button 
       onClick={onClick}
@@ -42,59 +62,146 @@ const SettingsModal = ({ user, onClose, onLogout }: { user: User, onClose: () =>
     </button>
   );
 
+  const renderSubPage = () => {
+    switch (currentSubPage) {
+      case 'profile':
+        return (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Username</label>
+              <input 
+                type="text" 
+                value={editUsername}
+                onChange={e => setEditUsername(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none"
+              />
+            </div>
+            <div className="mb-8">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Bio</label>
+              <textarea 
+                value={editBio}
+                onChange={e => setEditBio(e.target.value)}
+                rows={4}
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none resize-none"
+              />
+            </div>
+            <button 
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+              className="w-full bg-neon-purple py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-purple/80 transition-all disabled:opacity-50"
+            >
+              {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Save size={20} />}
+              Save Changes
+            </button>
+          </div>
+        );
+      case 'privacy':
+        return (
+          <div className="animate-fade-in text-gray-400 text-sm leading-relaxed space-y-4">
+            <h3 className="text-white font-bold text-lg">dramarr Privacy Policy</h3>
+            <p>Effective Date: October 2023</p>
+            <p>At dramarr, we respect your privacy and are committed to protecting your personal data. This policy outlines how we collect, use, and safeguard your information when you use our platform.</p>
+            <h4 className="text-white font-bold">1. Data Collection</h4>
+            <p>We collect information you provide directly to us, such as your username, email, and content you upload. We also collect usage data to improve your experience.</p>
+            <h4 className="text-white font-bold">2. How We Use Data</h4>
+            <p>Your data is used to personalize your feed, process rewards, and facilitate social interactions within the community.</p>
+            <h4 className="text-white font-bold">3. Data Sharing</h4>
+            <p>We do not sell your personal information. We may share data with service providers who help us operate our platform.</p>
+            <div className="p-4 bg-gray-900/50 rounded-xl border border-white/5 mt-8">
+              <p className="text-xs italic">For full legal inquiries, please contact legal@dramarr.app</p>
+            </div>
+          </div>
+        );
+      case 'region':
+        return (
+          <div className="animate-fade-in space-y-2">
+            {['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Japan'].map(c => (
+              <button 
+                key={c}
+                onClick={() => { onUpdateUser({ country: c }); setCurrentSubPage(null); }}
+                className={`w-full flex justify-between items-center p-4 rounded-xl transition-all ${user.country === c ? 'bg-neon-purple/20 border border-neon-purple/50 text-white' : 'bg-gray-900/50 text-gray-400 border border-transparent hover:bg-gray-800'}`}
+              >
+                <span className="font-bold">{c}</span>
+                {user.country === c && <CheckCircle size={18} className="text-neon-purple" />}
+              </button>
+            ))}
+          </div>
+        );
+      default:
+        return (
+          <>
+            <div className="mb-8">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Account</h3>
+              <SettingItem icon={UserIcon} label="Edit Profile" value={`@${user.username}`} onClick={() => setCurrentSubPage('profile')} />
+              <SettingItem icon={Mail} label="Email Address" value={user.email} />
+              <SettingItem icon={Lock} label="Password & Security" />
+              <SettingItem icon={Globe} label="Region & Language" value={user.country || "Not set"} onClick={() => setCurrentSubPage('region')} />
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Notifications</h3>
+              <SettingItem icon={Bell} label="Push Notifications" value="Enabled" />
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Billing</h3>
+              <SettingItem icon={CreditCard} label="Payment Methods" />
+              <SettingItem icon={Shield} label="Subscription Plan" value={user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'} />
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Support</h3>
+              <SettingItem icon={HelpCircle} label="Help Center" />
+              <SettingItem icon={Shield} label="Privacy Policy" onClick={() => setCurrentSubPage('privacy')} />
+            </div>
+
+            <div className="mt-12 space-y-3">
+              <button 
+                onClick={onLogout}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-2xl transition-all border border-red-500/20"
+              >
+                <LogOut size={20} /> Log Out
+              </button>
+              <button 
+                onClick={() => { if(confirm("Are you sure? This is permanent.")) alert("Account deleted"); }}
+                className="w-full flex items-center justify-center gap-3 p-4 text-gray-600 hover:text-red-600 font-bold rounded-2xl transition-all text-xs"
+              >
+                <Trash2 size={14} /> Delete Account
+              </button>
+            </div>
+          </>
+        );
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl animate-fade-in flex flex-col">
       <div className="p-6 flex justify-between items-center border-b border-white/10 shrink-0">
-        <h2 className="text-2xl font-black text-white">Settings</h2>
+        <div className="flex items-center gap-3">
+          {currentSubPage && (
+            <button onClick={() => setCurrentSubPage(null)} className="text-gray-400 hover:text-white">
+              <ChevronLeft size={28} />
+            </button>
+          )}
+          <h2 className="text-2xl font-black text-white">
+            {currentSubPage === 'profile' ? 'Edit Profile' : 
+             currentSubPage === 'privacy' ? 'Privacy Policy' :
+             currentSubPage === 'region' ? 'Region & Language' : 'Settings'}
+          </h2>
+        </div>
         <button onClick={onClose} className="p-2 bg-gray-800 rounded-full text-white">
           <X size={24} />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
-        <div className="mb-8">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Account</h3>
-          <SettingItem icon={UserIcon} label="Edit Profile" value={`@${user.username}`} />
-          <SettingItem icon={Mail} label="Email Address" value={user.email} />
-          <SettingItem icon={Lock} label="Password & Security" />
-          <SettingItem icon={Globe} label="Region & Language" value={user.country || "Not set"} />
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Notifications</h3>
-          <SettingItem icon={Bell} label="Push Notifications" value="Enabled" />
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Billing</h3>
-          <SettingItem icon={CreditCard} label="Payment Methods" />
-          <SettingItem icon={Shield} label="Subscription Plan" value={user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'} />
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 ml-1">Support</h3>
-          <SettingItem icon={HelpCircle} label="Help Center" />
-          <SettingItem icon={Shield} label="Privacy Policy" />
-        </div>
-
-        <div className="mt-12 space-y-3">
-          <button 
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-2xl transition-all border border-red-500/20"
-          >
-            <LogOut size={20} /> Log Out
-          </button>
-          <button 
-            onClick={() => { if(confirm("Are you sure? This is permanent.")) alert("Account deleted"); }}
-            className="w-full flex items-center justify-center gap-3 p-4 text-gray-600 hover:text-red-600 font-bold rounded-2xl transition-all text-xs"
-          >
-            <Trash2 size={14} /> Delete Account
-          </button>
-        </div>
+        {renderSubPage()}
         
-        <div className="text-center mt-10 pb-10">
-          <p className="text-[10px] text-gray-700 font-bold tracking-widest uppercase">dramarr v1.0.4</p>
-        </div>
+        {!currentSubPage && (
+          <div className="text-center mt-10 pb-10">
+            <p className="text-[10px] text-gray-700 font-bold tracking-widest uppercase">dramarr v1.0.4</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -121,6 +228,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
           user={currentUser} 
           onClose={() => setIsSettingsOpen(false)} 
           onLogout={onLogout} 
+          onUpdateUser={onUpdateUser}
         />
       )}
       
@@ -154,7 +262,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
                     <div className="flex gap-3 justify-center">
                         {isOwnProfile ? (
                             <>
-                                <button className="bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2 rounded-xl text-sm transition-all">Edit Profile</button>
+                                <button onClick={() => setIsSettingsOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2 rounded-xl text-sm transition-all">Edit Profile</button>
                                 <button onClick={onOpenAnalytics} className="bg-purple-900/40 text-purple-400 font-bold px-6 py-2 rounded-xl text-sm border border-purple-500/30 flex items-center gap-2 hover:bg-purple-900/60 transition-all"><BarChart3 size={16}/> Analytics</button>
                             </>
                         ) : (
