@@ -27,7 +27,7 @@ export interface User {
   lastPremiumUnlockDate: string;
   rank?: number;
   points?: number;
-  // Settings & Drive Fields
+  // Settings & Mobility Fields
   screenTimeLimit?: number;
   dataSaverMode?: boolean;
   aiMemoryEnabled?: boolean;
@@ -38,7 +38,6 @@ export interface User {
   driverRating?: number;
   vehicleModel?: string;
   currentRideId?: string;
-  // New Industrial Preference Fields
   accessibilityCaptions?: boolean;
   highContrastMode?: boolean;
   hapticFeedbackStrength?: 'none' | 'low' | 'high';
@@ -61,7 +60,7 @@ export interface RideRequest {
     fare: number;
     status: RideStatus;
     timestamp: number;
-    vehicleType: 'Standard' | 'Director' | 'Superstar';
+    vehicleType: 'Standard' | 'Elite' | 'Van';
 }
 
 export interface VideoChoice {
@@ -225,7 +224,7 @@ export enum TabView {
   DAILY_REWARD = 'DAILY_REWARD',
   AD_CENTER = 'AD_CENTER',
   CHARACTER_CHAT = 'CHARACTER_CHAT',
-  DRIVE = 'DRIVE'
+  RIDES = 'RIDES'
 }
 
 export interface MusicTrack {

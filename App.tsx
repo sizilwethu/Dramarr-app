@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X, LayoutGrid, Settings, LogOut, Search, RotateCcw, Car } from 'lucide-react';
+import { Home, Globe, PlusCircle, Compass, User as UserIcon, Gift, Music, Play, Pause, X, LayoutGrid, Settings, LogOut, Search, RotateCcw, Car, Navigation } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { supabase } from './lib/supabaseClient';
 import { api } from './services/api';
@@ -220,7 +220,7 @@ export default function App() {
       case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} onBack={goHome} />;
       case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={() => setUser(null)} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => handleOpenCreatorStudio('analytics')} onOpenAds={() => setActiveTab(TabView.AD_CENTER)} onBack={goHome} />;
       case TabView.AD_CENTER: return <AdCenter user={user} onBack={() => setActiveTab(TabView.PROFILE)} />;
-      case TabView.DRIVE: return <DriveView user={user} onUpdateUser={(d) => setUser({...user, ...d})} onBack={goHome} />;
+      case TabView.RIDES: return <DriveView user={user} onUpdateUser={(d) => setUser({...user, ...d})} onBack={goHome} />;
       default: return null;
     }
   };
@@ -237,7 +237,7 @@ export default function App() {
         <div className="flex-1 flex flex-col gap-2">
             <NavItem tab={TabView.FEED} icon={Home} label="Feed" />
             <NavItem tab={TabView.EXPLORE} icon={Compass} label="Explore" />
-            <NavItem tab={TabView.DRIVE} icon={Car} label="Drive" />
+            <NavItem tab={TabView.RIDES} icon={Navigation} label="Rides" />
             <NavItem tab={TabView.SOCIAL} icon={Globe} label="Social" />
             <NavItem tab={TabView.MUSIC} icon={Music} label="Music" />
             <NavItem tab={TabView.PROFILE} icon={UserIcon} label="Me" />
@@ -248,7 +248,7 @@ export default function App() {
         <div className="flex-1 relative min-h-0">{renderContent()}</div>
         <div className="md:hidden h-[70px] bg-black/90 backdrop-blur-xl border-t border-white/5 flex justify-around items-center px-2 pb-safe z-50 shrink-0">
           <button onClick={() => setActiveTab(TabView.FEED)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.FEED ? 'text-white' : 'text-gray-500'}`}><Home size={22} /><span className="text-[8px] font-black uppercase">Home</span></button>
-          <button onClick={() => setActiveTab(TabView.DRIVE)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.DRIVE ? 'text-white' : 'text-gray-500'}`}><Car size={22} /><span className="text-[8px] font-black uppercase">Drive</span></button>
+          <button onClick={() => setActiveTab(TabView.RIDES)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.RIDES ? 'text-white' : 'text-gray-500'}`}><Navigation size={22} /><span className="text-[8px] font-black uppercase">Rides</span></button>
           <button onClick={() => handleOpenCreatorStudio()} className="flex flex-col items-center justify-center -mt-6"><div className="w-14 h-14 bg-gradient-to-tr from-neon-purple to-neon-pink rounded-full flex items-center justify-center shadow-lg border-4 border-black"><PlusCircle size={28} className="text-white" /></div></button>
           <button onClick={() => setActiveTab(TabView.SOCIAL)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.SOCIAL ? 'text-white' : 'text-gray-500'}`}><Globe size={22} /><span className="text-[8px] font-black uppercase">Social</span></button>
           <button onClick={() => setActiveTab(TabView.PROFILE)} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === TabView.PROFILE ? 'text-white' : 'text-gray-500'}`}><UserIcon size={22} /><span className="text-[8px] font-black uppercase">Me</span></button>
