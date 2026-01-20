@@ -36,11 +36,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
     <div className="h-full bg-black overflow-y-auto animate-fade-in no-scrollbar">
       <div className="max-w-6xl mx-auto w-full pt-12 md:pt-10 pb-10">
           
-          {/* Universal Back Button */}
-          <div className="px-6 md:px-12 mb-4">
+          {/* Universal Header */}
+          <div className="px-6 md:px-12 mb-4 flex justify-between items-center">
               <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
                   <ChevronLeft size={28} /> <span className="font-bold">Back</span>
               </button>
+              
+              {isOwnProfile && (
+                <button 
+                  onClick={() => alert("Settings coming soon!")}
+                  className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg"
+                >
+                  <Settings size={24} />
+                </button>
+              )}
           </div>
 
           <div className="px-6 md:px-12 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8">
