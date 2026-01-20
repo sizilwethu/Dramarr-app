@@ -15,30 +15,23 @@ export interface User {
   unlockedVideoIds: string[];
   paypalEmail?: string;
   joinDate: string;
-  // New Personal Info Fields
   firstName?: string;
   lastName?: string;
   dob?: string;
   gender?: string;
   country?: string;
   address?: string;
-  // Subscription
   subscriptionStatus?: 'free' | 'premium';
   subscriptionRenewsAt?: number;
-  // Daily Limits
   dailyPremiumUnlockCount: number;
-  lastPremiumUnlockDate: string; // Format: "Mon Jan 01 2024"
+  lastPremiumUnlockDate: string;
+  rank?: number; // Added for leaderboard
+  points?: number; // Added for leaderboard
 }
 
-export interface Series {
-  id: string;
-  title: string;
-  description: string;
-  coverUrl: string;
-  creatorId: string;
-  category: string;
-  year: number;
-  totalEpisodes: number;
+export interface VideoChoice {
+    label: string;
+    targetVideoId: string;
 }
 
 export interface Video {
@@ -61,10 +54,21 @@ export interface Video {
   episodeNumber?: number;
   timestamp: string;
   views?: number;
-  // Ad Props
   isAd?: boolean;
   adActionLabel?: string;
   adDestinationUrl?: string;
+  choices?: VideoChoice[]; // Added for interactive plot choices
+}
+
+export interface Series {
+  id: string;
+  title: string;
+  description: string;
+  coverUrl: string;
+  creatorId: string;
+  category: string;
+  year: number;
+  totalEpisodes: number;
 }
 
 export interface Story {
@@ -76,8 +80,7 @@ export interface Story {
   type: 'image' | 'video';
   isViewed: boolean;
   timestamp: number;
-  views?: number; // Added View Count
-  // Ad Props
+  views?: number;
   isAd?: boolean;
 }
 
@@ -90,9 +93,8 @@ export interface SocialPost {
   imageUrl?: string;
   likes: number;
   comments: number;
-  views?: number; // Added View Count
+  views?: number;
   timestamp: string;
-  // Ad Props
   isAd?: boolean;
   adActionLabel?: string;
 }
@@ -131,7 +133,7 @@ export interface Comment {
     avatarUrl: string;
     text: string;
     timestamp: number;
-    replies?: Comment[]; // Nested replies
+    replies?: Comment[];
 }
 
 export interface AdCampaign {
@@ -139,7 +141,7 @@ export interface AdCampaign {
     userId: string;
     imageUrl: string;
     title: string;
-    budget: number; // $25
+    budget: number;
     impressions: number;
     clicks: number;
     status: 'active' | 'expired';
