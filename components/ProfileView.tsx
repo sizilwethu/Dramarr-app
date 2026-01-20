@@ -5,7 +5,8 @@ import { api } from '../services/api';
 import { 
   Settings, Grid as GridIcon, Folder, Play, BarChart3, ChevronLeft, 
   LogOut, User as UserIcon, Camera, Trash2, X, Shield, Bell, 
-  CreditCard, HelpCircle, ChevronRight, Globe, Lock, Mail, Save, CheckCircle
+  CreditCard, HelpCircle, ChevronRight, Globe, Lock, Mail, Save, CheckCircle,
+  Calendar, MapPin, UserCheck, ShieldAlert, Megaphone
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -19,6 +20,7 @@ interface ProfileViewProps {
   onDeleteVideo: (id: string) => void;
   onRemoveProfilePic: () => void;
   onOpenAnalytics: () => void;
+  onOpenAds: () => void;
   viewingUserId?: string;
   onBack: () => void;
 }
@@ -207,7 +209,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
   );
 };
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, viewingUserId, onBack }) => {
+export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, onOpenAds, viewingUserId, onBack }) => {
   const [activeTab, setActiveTab] = useState<'grid' | 'series'>('grid');
   const [profileUser, setProfileUser] = useState<User>(currentUser);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -232,7 +234,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
         />
       )}
       
-      <div className="max-w-6xl mx-auto w-full pt-12 md:pt-10 pb-10">
+      <div className="max-w-6xl mx-auto w-full pt-12 md:pt-10 pb-20">
           
           {/* Universal Header */}
           <div className="px-6 md:px-12 mb-4 flex justify-between items-center">
@@ -240,14 +242,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
                   <ChevronLeft size={28} /> <span className="font-bold">Back</span>
               </button>
               
-              {isOwnProfile && (
-                <button 
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg active:scale-90"
-                >
-                  <Settings size={24} />
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                  {isOwnProfile && (
+                    <button 
+                      onClick={onOpenAds}
+                      className="p-2 bg-pink-900/20 border border-pink-500/30 rounded-full text-pink-400 hover:text-pink-300 transition-all shadow-lg active:scale-90"
+                      title="Ad Center"
+                    >
+                      <Megaphone size={24} />
+                    </button>
+                  )}
+                  {isOwnProfile && currentUser.isAdmin && (
+                    <button 
+                      onClick={onOpenAdmin}
+                      className="p-2 bg-red-900/20 border border-red-500/30 rounded-full text-red-400 hover:text-red-300 transition-all shadow-lg shadow-red-500/10 active:scale-90"
+                      title="Admin Panel"
+                    >
+                      <ShieldAlert size={24} />
+                    </button>
+                  )}
+                  {isOwnProfile && (
+                    <button 
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg active:scale-90"
+                    >
+                      <Settings size={24} />
+                    </button>
+                  )}
+              </div>
           </div>
 
           <div className="px-6 md:px-12 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8">
@@ -277,7 +299,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
                     <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">12.5k</span><span className="text-gray-500 text-sm">likes</span></div>
                 </div>
                 
-                <p className="text-gray-400 text-lg leading-relaxed max-w-2xl">{profileUser.bio || "No bio yet."}</p>
+                <p className="text-gray-400 text-lg leading-relaxed max-w-2xl mb-6">{profileUser.bio || "No bio yet."}</p>
+
+                {/* Restored Personal Info Block */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-900/40 rounded-2xl border border-gray-800/50 max-w-2xl">
+                    <div className="flex items-center gap-2 text-gray-400">
+                        <Calendar size={14} className="text-neon-purple" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(profileUser.joinDate).toLocaleDateString()}</span>
+                    </div>
+                    {profileUser.country && (
+                        <div className="flex items-center gap-2 text-gray-400">
+                            <MapPin size={14} className="text-neon-pink" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">{profileUser.country}</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2 text-gray-400">
+                        <UserCheck size={14} className="text-blue-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{profileUser.subscriptionStatus === 'premium' ? 'Premium' : 'Standard'}</span>
+                    </div>
+                </div>
             </div>
           </div>
 

@@ -171,7 +171,8 @@ export enum TabView {
   UPLOAD = 'UPLOAD',
   PROFILE = 'PROFILE',
   ADMIN = 'ADMIN',
-  DAILY_REWARD = 'DAILY_REWARD'
+  DAILY_REWARD = 'DAILY_REWARD',
+  AD_CENTER = 'AD_CENTER'
 }
 
 export const CATEGORIES = ['Romance', 'Thriller', 'CEO', 'Fantasy', 'Comedy', 'Revenge'];

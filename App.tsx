@@ -20,6 +20,7 @@ import { ExploreView } from './components/ExploreView';
 import { DailyRewardView } from './components/DailyRewardView';
 import { InterstitialAd } from './components/InterstitialAd';
 import { MusicView } from './components/MusicView';
+import { AdCenter } from './components/AdCenter';
 
 const PERSISTENCE_KEY_TAB = 'dramarr_active_tab';
 const PERSISTENCE_KEY_FEED = 'dramarr_feed_tab';
@@ -71,7 +72,7 @@ export default function App() {
   // Hardware Back Button Listener
   useEffect(() => {
     const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      if (activeTab === TabView.ADMIN) {
+      if (activeTab === TabView.ADMIN || activeTab === TabView.AD_CENTER) {
         setActiveTab(TabView.PROFILE);
       } else if (activeTab === TabView.SOCIAL && nestedStateRef.current.hasActiveChat) {
         setActiveTab(TabView.SOCIAL);
@@ -300,9 +301,10 @@ export default function App() {
       case TabView.EXPLORE: return <ExploreView onBack={goHome} />;
       case TabView.MUSIC: return <MusicView currentTrack={currentTrack} isPlaying={isMusicPlaying} onPlayTrack={(t) => { setCurrentTrack(t); setIsMusicPlaying(true); }} onPauseTrack={() => setIsMusicPlaying(false)} currentUser={user} onBack={goHome} />;
       case TabView.UPLOAD: return <CreatorStudio onClose={() => { loadContent(); setActiveTab(TabView.FEED); }} user={user} videos={videos} initialMode={studioMode} onBack={goHome} />;
-      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={handleLogout} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => handleOpenCreatorStudio('analytics')} onBack={goHome} />;
+      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={handleLogout} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => handleOpenCreatorStudio('analytics')} onOpenAds={() => setActiveTab(TabView.AD_CENTER)} onBack={goHome} />;
       case TabView.DAILY_REWARD: return <DailyRewardView user={user} videos={videos} onClose={goHome} onWatchAd={() => {}} onPlayVideo={() => setActiveTab(TabView.FEED)} />;
       case TabView.ADMIN: return <AdminDashboard onClose={() => setActiveTab(TabView.PROFILE)} />;
+      case TabView.AD_CENTER: return <AdCenter user={user} onBack={() => setActiveTab(TabView.PROFILE)} />;
       default: return null;
     }
   };

@@ -6,12 +6,12 @@ export const CURRENT_USER: User = {
   username: 'drama_fan_99',
   email: 'user@dramarr.app',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-  bio: 'Addicted to plot twists 🌀',
-  isVerified: false,
+  bio: 'Addicted to plot twists 🌀 | Platform Admin',
+  isVerified: true,
   isCreator: true,
-  isAdmin: false,
-  coins: 120,
-  credits: 5,
+  isAdmin: true, // Restored Admin status
+  coins: 1250,
+  credits: 42,
   following: ['u2', 'u3'],
   followers: 450,
   unlockedVideoIds: ['v1', 'v3'],
@@ -24,7 +24,7 @@ export const CURRENT_USER: User = {
   gender: 'female',
   country: 'USA',
   address: '123 Drama Lane, Hollywood, CA',
-  subscriptionStatus: 'free',
+  subscriptionStatus: 'premium',
   // Daily Limits
   dailyPremiumUnlockCount: 0,
   lastPremiumUnlockDate: new Date().toDateString()
@@ -156,7 +156,6 @@ export const MOCK_VIDEOS: Video[] = [
   }
 ];
 
-// --- MOCK VIDEO ADS ---
 export const MOCK_VIDEO_ADS: Video[] = [
     {
         id: 'ad_v1',
