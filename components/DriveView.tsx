@@ -14,7 +14,7 @@ interface DriveViewProps {
   onBack: () => void;
 }
 
-// Fixed: Moved Users declaration above its usage in VEHICLE_CLASSES to avoid TDZ (Temporal Dead Zone) error.
+// Declared Users component before it's used in VEHICLE_CLASSES to avoid TDZ error
 const Users = ({ size, className }: any) => (
     <svg 
       width={size} 
@@ -94,7 +94,7 @@ export const DriveView: React.FC<DriveViewProps> = ({ user, onUpdateUser, onBack
 
   const handleCompleteRide = () => {
     if (!activeRide) return;
-    onUpdateUser({ coins: user.coins - activeRide.fare });
+    onUpdateUser({ coins: (user.coins || 0) - activeRide.fare });
     setRideStatus('COMPLETED');
     setTimeout(() => {
         setRideStatus('REQUESTING');
@@ -204,7 +204,7 @@ export const DriveView: React.FC<DriveViewProps> = ({ user, onUpdateUser, onBack
                                 <h4 className="text-base font-bold text-white">{activeRide?.driverName}</h4>
                                 <div className="flex items-center gap-1 text-gray-500 text-xs">
                                     <Star size={12} className="text-yellow-500" fill="currentColor" />
-                                    <span>4.9 • {activeRide?.vehicleType}</span>
+                                    <span>4.9 • {activeRide?.vehicleInfo?.type}</span>
                                 </div>
                             </div>
                         </div>

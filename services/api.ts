@@ -12,7 +12,7 @@ const mapProfileToUser = (profile: any, email?: string): User => ({
   bio: profile.bio || '',
   isVerified: profile.is_verified || false,
   isCreator: profile.is_creator || false,
-  isAdmin: false,
+  isAdmin: profile.is_admin || false,
   coins: profile.coins || 0,
   credits: profile.credits || 0,
   following: profile.following || [],
@@ -28,7 +28,12 @@ const mapProfileToUser = (profile: any, email?: string): User => ({
   dob: profile.dob || '',
   gender: profile.gender || '',
   country: profile.country || '',
-  address: profile.address || ''
+  address: profile.address || '',
+  isDriver: profile.is_driver || false,
+  driverStatus: profile.driver_status || 'none',
+  onlineStatus: profile.online_status || 'offline',
+  driverRating: profile.driver_rating || 5,
+  walletBalance: profile.wallet_balance || 0
 });
 
 const mapDbVideoToVideo = (vid: any, creatorProfile: any): Video => ({

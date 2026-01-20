@@ -25,6 +25,10 @@ export const CURRENT_USER: User = {
   country: 'USA',
   address: '123 Drama Lane, Hollywood, CA',
   subscriptionStatus: 'premium',
+  isDriver: false,
+  driverStatus: 'none',
+  onlineStatus: 'offline',
+  driverRating: 5,
   // Daily Limits
   dailyPremiumUnlockCount: 0,
   lastPremiumUnlockDate: new Date().toDateString()
@@ -174,7 +178,10 @@ export const MOCK_VIDEO_ADS: Video[] = [
         timestamp: 'Sponsored',
         isAd: true,
         adActionLabel: 'Test Drive',
-        adDestinationUrl: 'https://example.com'
+        adDestinationUrl: 'https://example.com',
+        seriesTitle: 'Sponsored Ad',
+        episodeNumber: 0,
+        views: 1200
     }
 ];
 
@@ -187,7 +194,8 @@ export const MOCK_STORIES: Story[] = [
     mediaUrl: 'https://images.unsplash.com/photo-1496345875659-11f7dd282d1d?w=400&h=800&fit=crop',
     type: 'image',
     isViewed: false,
-    timestamp: Date.now() - 3600000
+    timestamp: Date.now() - 3600000,
+    views: 150
   },
   {
     id: 'st2',
@@ -197,7 +205,8 @@ export const MOCK_STORIES: Story[] = [
     mediaUrl: 'https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=400&h=800&fit=crop',
     type: 'image',
     isViewed: true,
-    timestamp: Date.now() - 7200000
+    timestamp: Date.now() - 7200000,
+    views: 450
   },
   {
     id: 'st_ad1',
@@ -208,7 +217,8 @@ export const MOCK_STORIES: Story[] = [
     type: 'image',
     isViewed: false,
     timestamp: Date.now(),
-    isAd: true
+    isAd: true,
+    views: 0
   }
 ];
 
@@ -222,7 +232,8 @@ export const MOCK_SOCIAL_POSTS: SocialPost[] = [
     imageUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800&h=500&fit=crop',
     likes: 1240,
     comments: 89,
-    timestamp: '30m ago'
+    timestamp: '30m ago',
+    views: 4500
   },
   {
     id: 'sp2',
@@ -232,7 +243,8 @@ export const MOCK_SOCIAL_POSTS: SocialPost[] = [
     content: 'Just finished editing the season finale. You guys are NOT ready for this cliffhanger. 🤯',
     likes: 560,
     comments: 120,
-    timestamp: '2h ago'
+    timestamp: '2h ago',
+    views: 2300
   },
   {
       id: 'sp_ad1',
@@ -245,7 +257,8 @@ export const MOCK_SOCIAL_POSTS: SocialPost[] = [
       comments: 5,
       timestamp: 'Sponsored',
       isAd: true,
-      adActionLabel: 'Buy Now'
+      adActionLabel: 'Buy Now',
+      views: 0
   }
 ];
 

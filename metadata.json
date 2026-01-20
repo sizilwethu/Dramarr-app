@@ -1,8 +1,9 @@
 {
-  "name": "dramarr",
-  "description": "A modern, cinematic short-drama social platform combining features of TikTok, Netflix, and Instagram Stories.",
+  "name": "SwiftRide",
+  "description": "Standard Urban Mobility and Ride-Hailing Platform.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }
