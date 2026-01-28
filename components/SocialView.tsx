@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, SocialPost, User, Comment, CommunityMood, Conversation, Message } from '../types';
 import { api } from '../services/api';
+import { MOCK_POSTS, MOCK_STORIES, MOCK_CONVERSATIONS, MOCK_CHAT_MESSAGES } from '../services/mockData';
 import { Heart, MessageSquare, Send, Plus, MoreHorizontal, X, RotateCcw, Sparkles, Radio, Vote, Users, Camera, FileVideo, ShieldCheck, ChevronLeft, PenSquare, Flame, Laugh, Smile, Frown, Reply, Image as ImageIcon, Search } from 'lucide-react';
 import { StoryPlayer } from './StoryPlayer';
 import { StoryCreator } from './StoryCreator';
@@ -33,8 +34,11 @@ export const SocialView: React.FC<{
   onClearTarget?: () => void
 }> = ({ currentUser, stories: initialStories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack, onChatStateChange, initialPartner, onClearTarget }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>(initialPartner ? 'inbox' : 'feed');
-  const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
-  const [stories, setStories] = useState<Story[]>(initialStories);
+  
+  // Use Mocks as initial state
+  const [posts, setPosts] = useState<SocialPost[]>(MOCK_POSTS);
+  const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeMood, setActiveMood] = useState<CommunityMood>(MOCK_MOODS[0]);
   
@@ -55,8 +59,8 @@ export const SocialView: React.FC<{
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
-  // Inbox State
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  // Inbox State - initialized with mocks
+  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(initialPartner || null);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -73,6 +77,7 @@ export const SocialView: React.FC<{
   }, [initialPartner]);
 
   useEffect(() => {
+    // Optionally still try to load from API but keep mocks as base
     loadStories();
     if (selectedPostForComments) {
       loadComments(selectedPostForComments.id);
@@ -97,7 +102,9 @@ export const SocialView: React.FC<{
   const loadStories = async () => {
     try {
       const data = await api.getStories();
-      if (data.length > 0) setStories(data);
+      if (data && data.length > 0) {
+          setStories([...MOCK_STORIES, ...data]);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -107,7 +114,9 @@ export const SocialView: React.FC<{
     setIsLoadingConversations(true);
     try {
       const data = await api.getConversations(currentUser.id);
-      setConversations(data);
+      if (data && data.length > 0) {
+          setConversations(data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -119,7 +128,12 @@ export const SocialView: React.FC<{
     if (!selectedConversation) return;
     try {
       const data = await api.getMessages(currentUser.id, selectedConversation.partnerId);
-      setChatMessages(data);
+      // Fallback to MOCK_CHAT_MESSAGES if no real data found for demonstration
+      if (data && data.length > 0) {
+        setChatMessages(data);
+      } else if (selectedConversation.partnerId === 'u1') {
+        setChatMessages(MOCK_CHAT_MESSAGES);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -186,7 +200,9 @@ export const SocialView: React.FC<{
       if (onRefresh) await onRefresh();
       try {
         const latestPosts = await api.getSocialPosts();
-        if (latestPosts.length > 0) setPosts(latestPosts);
+        if (latestPosts && latestPosts.length > 0) {
+            setPosts([...MOCK_POSTS, ...latestPosts]);
+        }
         await loadStories();
         if (activeTab === 'inbox') await loadConversations();
       } catch (e) {
@@ -422,7 +438,7 @@ export const SocialView: React.FC<{
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar pb-32">
         {chatMessages.map(m => {
-          const isMe = m.senderId === currentUser.id;
+          const isMe = m.senderId === currentUser.id || m.senderId === 'me';
           return (
             <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`}>
               <div className={`max-w-[80%] px-5 py-3 rounded-[24px] text-xs font-medium shadow-2xl relative ${isMe ? 'bg-gradient-to-r from-neon-purple to-neon-pink text-white rounded-br-none' : 'bg-gray-900 text-gray-300 rounded-bl-none border border-white/5'}`}>
