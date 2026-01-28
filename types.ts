@@ -42,6 +42,36 @@ export interface User {
   dataSaverMode?: boolean;
   aiMemoryEnabled?: boolean;
   screenTimeLimit?: number;
+  // Monetization Fields
+  monetizationEnabled?: boolean;
+  creatorTier?: 'Starter' | 'Growing' | 'Pro';
+  monthlyWatchTime?: number; // in minutes
+  pendingPayoutBalance?: number;
+  lifetimeEarnings?: number;
+}
+
+export type CreatorTier = {
+  name: 'Starter' | 'Growing' | 'Pro';
+  minFollowers: number;
+  minWatchTime: number;
+  cpm: number;
+  share: number;
+};
+
+export const CREATOR_TIERS: Record<string, CreatorTier> = {
+  Starter: { name: 'Starter', minFollowers: 5000, minWatchTime: 60000, cpm: 2, share: 0.40 },
+  Growing: { name: 'Growing', minFollowers: 20000, minWatchTime: 250000, cpm: 5, share: 0.50 },
+  Pro: { name: 'Pro', minFollowers: 100000, minWatchTime: 1000000, cpm: 10, share: 0.55 },
+};
+
+export interface PayoutRequest {
+  id: string;
+  userId: string;
+  username: string;
+  amount: number;
+  method: 'PayPal' | 'Bank' | 'Mobile' | 'Google Pay';
+  status: 'pending' | 'approved' | 'rejected';
+  timestamp: number;
 }
 
 export interface VehicleInfo {
@@ -57,7 +87,6 @@ export interface DriverDocuments {
   vehicleRegUrl: string;
 }
 
-// Added 'REQUESTING' to RideStatus
 export type RideStatus = 'IDLE' | 'SEARCHING' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'COMPLETED' | 'CANCELLED' | 'REQUESTING';
 
 export interface RideRequest {
@@ -119,6 +148,7 @@ export interface Video {
   episodeNumber: number;
   timestamp: string;
   views: number;
+  monetizedViews?: number;
   isAd?: boolean;
   adActionLabel?: string;
   adDestinationUrl?: string;
@@ -136,17 +166,35 @@ export interface Series {
   totalEpisodes: number;
 }
 
+export interface StorySegment {
+  id: string;
+  mediaUrl: string;
+  type: 'image' | 'video';
+  duration: number; // in seconds
+  overlayData?: {
+    text?: { content: string; x: number; y: number; color: string; fontSize: number }[];
+    stickers?: { type: string; x: number; y: number }[];
+  };
+  linkUrl?: string;
+}
+
+export interface StoryReaction {
+  userId: string;
+  type: 'heart' | 'laugh' | 'shock' | 'fire';
+}
+
 export interface Story {
   id: string;
   userId: string;
   username: string;
   avatarUrl: string;
-  mediaUrl: string;
-  type: 'image' | 'video';
+  segments: StorySegment[];
   isViewed: boolean;
   timestamp: number;
   isAd?: boolean;
-  views?: number; // Added views field
+  views?: number;
+  reactions?: StoryReaction[];
+  privacy: 'public' | 'friends' | 'close_friends';
 }
 
 export interface SocialPost {
@@ -156,12 +204,14 @@ export interface SocialPost {
   avatarUrl: string;
   content: string;
   imageUrl?: string | null;
+  mediaUrl?: string | null; // Generic media URL
+  mediaType?: 'image' | 'video' | 'text'; // Type of media attached
   likes: number;
   comments: number;
   timestamp: string;
   isAd?: boolean;
   views?: number;
-  adActionLabel?: string; // Added adActionLabel to SocialPost
+  adActionLabel?: string;
 }
 
 export interface AICharacter {
@@ -215,7 +265,6 @@ export interface Gift {
   cost: number;
 }
 
-// Added missing interfaces
 export interface Notification {
   id: string;
   type: 'system' | 'like' | 'comment' | 'follow';
@@ -260,5 +309,4 @@ export const VIRTUAL_GIFTS: Gift[] = [
   { id: 'g3', name: 'Diamond', icon: '💎', cost: 50 },
 ];
 
-// Added CATEGORIES constant
 export const CATEGORIES = ['CEO', 'Revenge', 'Romance', 'Fantasy', 'Horror', 'Action'];

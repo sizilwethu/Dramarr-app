@@ -1,5 +1,5 @@
 {
-  "name": "SwiftRide",
+  "name": "dramarr",
   "description": "Standard Urban Mobility and Ride-Hailing Platform.",
   "requestFramePermissions": [
     "camera",

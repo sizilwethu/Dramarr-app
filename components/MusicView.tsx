@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MusicTrack, User } from '../types';
 import { api } from '../services/api';
-import { MOCK_MUSIC_TRACKS } from '../services/mockData';
 import { Play, Pause, Music, Disc, Heart, MoreHorizontal, Search, Upload, CheckCircle, FileAudio, Image as ImageIcon, ChevronLeft } from 'lucide-react';
 
 interface MusicViewProps {
@@ -34,7 +33,7 @@ export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, o
 
     const loadTracks = async () => {
         const dbTracks = await api.getMusicTracks();
-        setTracks([...dbTracks, ...MOCK_MUSIC_TRACKS]); // Merge real and mock for now
+        setTracks(dbTracks);
     };
 
     const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,11 +121,11 @@ export const MusicView: React.FC<MusicViewProps> = ({ currentTrack, isPlaying, o
                     </div>
                     
                     {/* Featured / Trending */}
-                    {!searchTerm && (
+                    {!searchTerm && tracks.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-lg font-bold text-white mb-4">Trending Now</h2>
                             <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x">
-                                {MOCK_MUSIC_TRACKS.map(track => (
+                                {tracks.slice(0, 5).map(track => (
                                     <div 
                                         key={track.id} 
                                         className="min-w-[140px] snap-start cursor-pointer group"

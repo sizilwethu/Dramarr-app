@@ -46,6 +46,15 @@
         -webkit-tap-highlight-color: transparent;
       }
 
+      /* Utility to hide scrollbars while maintaining functionality */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
       /* Custom Scrollbar for Desktop (md and up) */
       @media (min-width: 768px) {
         * {
@@ -70,7 +79,7 @@
         }
       }
 
-      /* AGGRESSIVE: Hide all scrollbars globally on Mobile (< 768px) */
+      /* Hiding scrollbars globally on Mobile (< 768px) */
       @media (max-width: 767px) {
         * {
           -ms-overflow-style: none !important;

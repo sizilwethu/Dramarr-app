@@ -1,89 +1,95 @@
 
-import React, { useState } from 'react';
-import { Search, Flame, TrendingUp, Play, Grid, ChevronLeft, ChevronRight, Trophy, Crown, Star, Medal, Sparkles, MessageSquare } from 'lucide-react';
-import { MOCK_SERIES, MOCK_VIDEOS } from '../services/mockData';
-import { CATEGORIES, User, AICharacter } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Search, Grid, ChevronLeft, ChevronRight, Sparkles, MessageSquare } from 'lucide-react';
+import { api } from '../services/api';
+import { CATEGORIES, Series, AICharacter } from '../types';
 
 interface ExploreViewProps {
     onBack: () => void;
     onOpenCharacterChat: (char: AICharacter) => void;
 }
 
-const TOP_CHARACTERS: AICharacter[] = [
-    { 
-        id: 'c1', 
-        name: 'President Kang', 
-        seriesId: 's1', 
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop', 
-        description: 'The cold-hearted CEO from "The CEO\'s Secret Wife".',
-        personality: 'Cold, calculated, secretive, but deeply protective. Speaks with authority.'
-    },
-    { 
-        id: 'c2', 
-        name: 'Elena Vance', 
-        seriesId: 's2', 
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop', 
-        description: 'The vengeful heiress from "Midnight Revenge".',
-        personality: 'Sharp-tongued, brilliant, and always two steps ahead. A little bit mysterious.'
-    }
-];
-
 export const ExploreView: React.FC<ExploreViewProps> = ({ onBack, onOpenCharacterChat }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [characters, setCharacters] = useState<AICharacter[]>([]);
+  const [series, setSeries] = useState<Series[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredSeries = MOCK_SERIES.filter(s => 
-    (activeCategory === 'All' || s.category === activeCategory) &&
-    (s.title.toLowerCase().includes(searchTerm.toLowerCase()) || s.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  useEffect(() => {
+    loadExploreData();
+  }, [activeCategory]);
+
+  const loadExploreData = async () => {
+    setIsLoading(true);
+    try {
+      const [chars, sers] = await Promise.all([
+        api.getAICharacters(),
+        api.getSeries(activeCategory)
+      ]);
+      setCharacters(chars);
+      setSeries(sers);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredSeries = series.filter(s => 
+    s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="h-full bg-black pt-12 md:pt-6 pb-20 flex flex-col animate-fade-in max-w-7xl mx-auto w-full overflow-hidden">
-      
-      <div className="px-4 md:px-8 mb-6 shrink-0">
-        <div className="flex items-center gap-4 mb-4">
+    <div className="flex-1 h-full flex flex-col bg-black md:pt-6 animate-fade-in max-w-7xl mx-auto w-full min-h-0 overflow-hidden">
+      <div className="px-4 md:px-8 mb-4 shrink-0">
+        <div className="flex items-center gap-3 mb-4">
             <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
-                <ChevronLeft size={28} />
+                <ChevronLeft size={24} />
             </button>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Explore</h1>
+            <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Explore</h1>
         </div>
-        <div className="relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 max-w-2xl">
-            <Search className="absolute left-4 top-4 text-gray-500 w-5 h-5" />
-            <input type="text" placeholder="Search dramas, characters, creators..." className="w-full bg-transparent py-4 pl-12 pr-4 text-white focus:outline-none placeholder-gray-600" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <div className="relative bg-gray-900/80 rounded-2xl overflow-hidden border border-white/5 max-w-2xl">
+            <Search className="absolute left-4 top-3.5 text-gray-500 w-4 h-4" />
+            <input 
+              type="text" 
+              placeholder="Search dramas, characters..." 
+              className="w-full bg-transparent py-3 pl-11 pr-4 text-sm text-white focus:outline-none placeholder-gray-600 font-medium" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto md:px-4 no-scrollbar">
-        
-        {/* Advanced: AI Protagonists Section */}
-        {activeCategory === 'All' && !searchTerm && (
-            <div className="mb-12">
-                <div className="flex items-center justify-between px-4 mb-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {activeCategory === 'All' && !searchTerm && characters.length > 0 && (
+            <div className="mb-8">
+                <div className="flex items-center justify-between px-4 mb-3">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="text-neon-purple w-5 h-5" />
-                        <h2 className="text-sm font-black text-white uppercase tracking-widest">Chat with Protagonists</h2>
+                        <Sparkles className="text-neon-purple w-4 h-4" />
+                        <h2 className="text-[9px] font-black text-white uppercase tracking-[0.4em]">Cast Connections</h2>
                     </div>
-                    <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded-full font-bold">BETA</span>
                 </div>
                 <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar">
-                    {TOP_CHARACTERS.map(char => (
+                    {characters.map(char => (
                         <div 
                             key={char.id} 
                             onClick={() => onOpenCharacterChat(char)}
-                            className="min-w-[280px] bg-gradient-to-br from-gray-900 to-black p-4 rounded-3xl border border-white/5 relative group cursor-pointer"
+                            className="min-w-[240px] bg-gray-900/40 p-4 rounded-[28px] border border-white/5 relative group cursor-pointer"
                         >
-                            <div className="flex items-center gap-4">
-                                <img src={char.avatarUrl} className="w-16 h-16 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
+                            <div className="flex items-center gap-3">
+                                <img src={char.avatarUrl} className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white text-base truncate">{char.name}</h3>
-                                    <p className="text-[10px] text-gray-500 line-clamp-2">{char.description}</p>
+                                    <h3 className="font-bold text-white text-xs truncate">{char.name}</h3>
+                                    <p className="text-[9px] text-gray-500 line-clamp-1">{char.description}</p>
                                 </div>
                             </div>
-                            <div className="mt-4 flex items-center justify-between bg-neon-purple/10 p-3 rounded-2xl border border-neon-purple/20">
-                                <span className="text-[10px] text-neon-purple font-black flex items-center gap-1 uppercase tracking-widest">
-                                    <MessageSquare size={12} /> Talk to Character
+                            <div className="mt-3 flex items-center justify-between bg-neon-purple/10 p-2.5 rounded-xl border border-neon-purple/20">
+                                <span className="text-[9px] text-neon-purple font-black flex items-center gap-1.5 uppercase tracking-widest">
+                                    <MessageSquare size={12} /> Talk
                                 </span>
-                                <ChevronRight size={14} className="text-neon-purple" />
+                                <ChevronRight size={12} className="text-neon-purple" />
                             </div>
                         </div>
                     ))}
@@ -91,33 +97,43 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ onBack, onOpenCharacte
             </div>
         )}
 
-        <div className="flex gap-2 px-4 mb-8 overflow-x-auto no-scrollbar shrink-0">
-             <button onClick={() => setActiveCategory('All')} className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${activeCategory === 'All' ? 'bg-white text-black border-white shadow-xl' : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-600'}`}>All Genres</button>
+        <div className="flex gap-2 px-4 mb-6 overflow-x-auto no-scrollbar shrink-0">
+             <button onClick={() => setActiveCategory('All')} className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${activeCategory === 'All' ? 'bg-white text-black border-white shadow-xl' : 'bg-gray-900 text-gray-400 border-gray-800'}`}>All</button>
              {CATEGORIES.map(cat => (
-                 <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${activeCategory === cat ? 'bg-white text-black border-white shadow-xl' : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-600'}`}>{cat}</button>
+                 <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${activeCategory === cat ? 'bg-white text-black border-white shadow-xl' : 'bg-gray-900 text-gray-400 border-gray-800'}`}>{cat}</button>
              ))}
         </div>
 
-        <div className="px-4 pb-12">
-             <div className="flex items-center gap-2 mb-6">
-                <Grid className="text-neon-purple w-6 h-6" />
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter">{searchTerm ? 'Search Results' : 'Must Watch Dramas'}</h2>
+        <div className="px-4 pb-24 min-h-full">
+            <div className="flex items-center gap-2 mb-4 px-1">
+                <Grid className="text-neon-purple w-4 h-4" />
+                <h2 className="text-[10px] font-black text-white uppercase tracking-[0.4em]">{searchTerm ? 'Results' : 'Recommended'}</h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {filteredSeries.map(series => (
-                    <div key={series.id} className="bg-gray-900/40 rounded-[24px] p-3 border border-white/5 hover:bg-gray-800 transition-all cursor-pointer group">
-                            <div className="aspect-[3/4] rounded-2xl overflow-hidden mb-3 relative">
-                            <img src={series.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center">
-                                <span className="bg-white/20 backdrop-blur-md text-white text-[9px] px-2 py-1 rounded-lg font-bold uppercase">{series.category}</span>
+            {isLoading ? (
+                <div className="flex justify-center py-20"><Sparkles className="animate-spin text-neon-purple" /></div>
+            ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {filteredSeries.map(s => (
+                        <div key={s.id} className="bg-gray-900/40 rounded-[24px] p-2 border border-white/5 hover:bg-gray-800 transition-all cursor-pointer group">
+                            <div className="aspect-[3/4] rounded-2xl overflow-hidden mb-2 relative">
+                                <img src={s.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                <div className="absolute bottom-1.5 left-1.5">
+                                    <span className="bg-white/20 backdrop-blur-md text-white text-[7px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">{s.category}</span>
+                                </div>
                             </div>
+                            <h3 className="font-bold text-[11px] text-white truncate px-1">{s.title}</h3>
+                            <p className="text-[9px] text-gray-500 px-1">{s.totalEpisodes} Episodes</p>
                         </div>
-                        <h3 className="font-bold text-sm text-white truncate mb-1">{series.title}</h3>
-                        <p className="text-[10px] text-gray-500 line-clamp-1">{series.totalEpisodes} Episodes • {series.year}</p>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
+            
+            {!isLoading && filteredSeries.length === 0 && (
+                <div className="py-20 text-center opacity-30">
+                    <p className="text-sm font-bold uppercase tracking-widest">No matching dramas found</p>
+                </div>
+            )}
         </div>
       </div>
     </div>
