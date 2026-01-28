@@ -28,9 +28,11 @@ export const SocialView: React.FC<{
   onDeleteStory: (id: string) => void, 
   onRefresh?: () => void, 
   onBack: () => void,
-  onChatStateChange?: (isActive: boolean) => void 
-}> = ({ currentUser, stories: initialStories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack, onChatStateChange }) => {
-  const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>('feed');
+  onChatStateChange?: (isActive: boolean) => void,
+  initialPartner?: Conversation | null,
+  onClearTarget?: () => void
+}> = ({ currentUser, stories: initialStories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack, onChatStateChange, initialPartner, onClearTarget }) => {
+  const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>(initialPartner ? 'inbox' : 'feed');
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
   const [stories, setStories] = useState<Story[]>(initialStories);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -55,12 +57,20 @@ export const SocialView: React.FC<{
 
   // Inbox State
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(initialPartner || null);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (initialPartner) {
+        setActiveTab('inbox');
+        setSelectedConversation(initialPartner);
+        onChatStateChange?.(true);
+    }
+  }, [initialPartner]);
 
   useEffect(() => {
     loadStories();
@@ -395,7 +405,7 @@ export const SocialView: React.FC<{
       {/* Header */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-xl z-10 pt-12">
         <div className="flex items-center gap-3">
-          <button onClick={() => { setSelectedConversation(null); onChatStateChange?.(false); }} className="text-gray-400 hover:text-white p-2">
+          <button onClick={() => { setSelectedConversation(null); onChatStateChange?.(false); onClearTarget?.(); }} className="text-gray-400 hover:text-white p-2">
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center gap-3">

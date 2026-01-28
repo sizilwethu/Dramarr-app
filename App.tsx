@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Home, Globe, PlusCircle, Compass, User as UserIcon, Navigation, Wallet, Settings, RotateCcw, Plus, Disc } from 'lucide-react';
-import { TabView, User, Video, Series, AICharacter } from './types';
+import { TabView, User, Video, Series, AICharacter, Conversation } from './types';
 import { api } from './services/api';
 
 // Components
@@ -26,6 +26,7 @@ export default function App() {
   const [series, setSeries] = useState<Series[]>([]);
   const [activeCharacter, setActiveCharacter] = useState<AICharacter | null>(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [targetPartner, setTargetPartner] = useState<Conversation | null>(null);
   const feedContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,6 +87,24 @@ export default function App() {
     }
   };
 
+  const handleToggleFollow = async (followingId: string) => {
+    if (!user) return;
+    try {
+      const isNowFollowing = await api.toggleFollow(user.id, followingId);
+      const newFollowing = isNowFollowing 
+        ? [...user.following, followingId]
+        : user.following.filter(id => id !== followingId);
+      setUser({ ...user, following: newFollowing });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const messageUser = (partner: Conversation) => {
+    setTargetPartner(partner);
+    setActiveTab(TabView.SOCIAL);
+  };
+
   const renderContent = () => {
     if (!user) return null;
 
@@ -103,7 +122,7 @@ export default function App() {
                     onUnlock={() => {}}
                     onWatchAd={() => {}}
                     isFollowing={user.following.includes(video.creatorId)}
-                    onToggleFollow={() => {}}
+                    onToggleFollow={() => handleToggleFollow(video.creatorId)}
                     isOwner={user.id === video.creatorId}
                     onDelete={() => {}}
                   />
@@ -117,12 +136,24 @@ export default function App() {
           </div>
         );
       case TabView.RIDES: return <SwiftRideHome user={user} onUpdateUser={(d) => setUser({...user, ...d})} />;
-      case TabView.SOCIAL: return <SocialView currentUser={user} stories={[]} posts={[]} onDeletePost={() => {}} onDeleteStory={() => {}} onBack={() => setActiveTab(TabView.FEED)} />;
+      case TabView.SOCIAL: 
+        return (
+          <SocialView 
+            currentUser={user} 
+            stories={[]} 
+            posts={[]} 
+            onDeletePost={() => {}} 
+            onDeleteStory={() => {}} 
+            onBack={() => setActiveTab(TabView.FEED)} 
+            initialPartner={targetPartner}
+            onClearTarget={() => setTargetPartner(null)}
+          />
+        );
       case TabView.EXPLORE: return <ExploreView onBack={() => setActiveTab(TabView.FEED)} onOpenCharacterChat={(char) => { setActiveCharacter(char); setActiveTab(TabView.CHARACTER_CHAT); }} />;
       case TabView.CHARACTER_CHAT: return activeCharacter ? <CharacterChat character={activeCharacter} currentUser={user} onBack={() => setActiveTab(TabView.EXPLORE)} /> : null;
       case TabView.MUSIC: return <MusicView currentTrack={null} isPlaying={false} onPlayTrack={() => {}} onPauseTrack={() => {}} currentUser={user} onBack={() => setActiveTab(TabView.FEED)} />;
       case TabView.WALLET: return <WalletView user={user} onUpdateUser={(d) => setUser({...user, ...d})} onBack={() => setActiveTab(TabView.PROFILE)} />;
-      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={() => { api.signOut(); setUser(null); setActiveTab(TabView.AUTH); }} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => {}} onOpenAds={() => {}} onOpenRides={() => setActiveTab(TabView.RIDES)} onBack={() => setActiveTab(TabView.FEED)} />;
+      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={() => { api.signOut(); setUser(null); setActiveTab(TabView.AUTH); }} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => {}} onOpenAds={() => {}} onOpenRides={() => setActiveTab(TabView.RIDES)} onBack={() => setActiveTab(TabView.FEED)} onMessageUser={messageUser} />;
       case TabView.UPLOAD: return <CreatorStudio onClose={() => setActiveTab(TabView.FEED)} user={user} videos={videos} onBack={() => setActiveTab(TabView.FEED)} />;
       case TabView.ADMIN: return <AdminPanel user={user} onBack={() => setActiveTab(TabView.PROFILE)} />;
       default: return null;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Video, Series, CATEGORIES } from '../types';
+import { User, Video, Series, CATEGORIES, Conversation } from '../types';
 import { api } from '../services/api';
 import { 
   Settings, Grid as GridIcon, Folder, Play, BarChart3, ChevronLeft, 
@@ -9,7 +9,7 @@ import {
   Calendar, MapPin, UserCheck, ShieldAlert, Megaphone, FileText, LockKeyhole, UserPlus, EyeOff,
   Sparkles, Smartphone, HeartPulse, HardDrive, Wallet, ShieldCheck, Zap,
   Instagram, Youtube, Accessibility, Database, Link2, Trash, Eye, Music, Navigation, Landmark,
-  Smartphone as PhoneIcon, Key, History, Fingerprint, RefreshCcw, Download, UserMinus, AlertCircle
+  Smartphone as PhoneIcon, Key, History, Fingerprint, RefreshCcw, Download, UserMinus, AlertCircle, MessageCircle
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -27,6 +27,7 @@ interface ProfileViewProps {
   onOpenRides: () => void;
   viewingUserId?: string;
   onBack: () => void;
+  onMessageUser?: (partner: Conversation) => void;
 }
 
 const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, onClose: () => void, onLogout: () => void, onUpdateUser: (d: any) => void }) => {
@@ -402,7 +403,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 ml-1">Ecosystem Configuration</h3>
                 <SettingItem icon={Zap} label="App Preferences" value="Theme, Language, Playback" onClick={() => setCurrentSubPage('preferences')} />
                 <SettingItem icon={Bell} label="Notification Engine" onClick={() => setCurrentSubPage('notifications')} />
-                <SettingItem icon={Shield} label="Privacy & Sovereignty" onClick={() => setCurrentSubPage('privacy')} />
+                <Shield label="Privacy & Sovereignty" onClick={() => setCurrentSubPage('privacy')} />
             </div>
 
             <div className="mb-8">
@@ -469,19 +470,50 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
   );
 };
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, onOpenAds, onOpenRides, viewingUserId, onBack }) => {
+export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, onOpenAds, onOpenRides, viewingUserId, onBack, onMessageUser }) => {
   const [activeTab, setActiveTab] = useState<'grid' | 'series'>('grid');
   const [profileUser, setProfileUser] = useState<User>(currentUser);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id;
+  const [isFollowing, setIsFollowing] = useState(currentUser.following.includes(viewingUserId || ''));
 
   const userVideos = videos.filter(v => v.creatorId === profileUser.id);
   const userSeries = series.filter(s => s.creatorId === profileUser.id);
 
   useEffect(() => {
-      if (viewingUserId && viewingUserId !== currentUser.id) api.getUserProfile(viewingUserId).then(u => { if(u) setProfileUser(u); });
+      if (viewingUserId && viewingUserId !== currentUser.id) {
+          api.getUserProfile(viewingUserId).then(u => { if(u) setProfileUser(u); });
+          setIsFollowing(currentUser.following.includes(viewingUserId));
+      }
       else setProfileUser(currentUser);
   }, [viewingUserId, currentUser]);
+
+  const handleFollow = async () => {
+    if (!viewingUserId || isOwnProfile) return;
+    try {
+        const isNowFollowing = await api.toggleFollow(currentUser.id, viewingUserId);
+        setIsFollowing(isNowFollowing || false);
+        // Sync local user state
+        const newFollowing = isNowFollowing 
+            ? [...currentUser.following, viewingUserId]
+            : currentUser.following.filter(id => id !== viewingUserId);
+        onUpdateUser({ following: newFollowing });
+    } catch (e) {
+        console.error(e);
+    }
+  };
+
+  const handleMessage = () => {
+      if (!onMessageUser || isOwnProfile) return;
+      onMessageUser({
+          partnerId: profileUser.id,
+          username: profileUser.username,
+          avatarUrl: profileUser.avatarUrl,
+          lastMessage: '',
+          timestamp: Date.now(),
+          unreadCount: 0
+      });
+  };
 
   return (
     <div className="h-full bg-black overflow-y-auto animate-fade-in no-scrollbar">
@@ -553,7 +585,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, vid
                                 <button onClick={onOpenAnalytics} className="bg-purple-900/40 text-purple-400 font-bold px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-purple-500/30 flex items-center gap-2 hover:bg-purple-900/60 transition-all"><BarChart3 size={16}/> Stats</button>
                             </>
                         ) : (
-                            <button className="bg-neon-pink text-white font-bold px-10 py-2 rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-neon-pink/20 hover:scale-105 transition-transform">Follow</button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={handleFollow}
+                                    className={`font-bold px-10 py-2 rounded-xl text-[10px] uppercase tracking-widest shadow-lg transition-all ${isFollowing ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'bg-neon-pink text-white shadow-neon-pink/20 hover:scale-105'}`}
+                                >
+                                    {isFollowing ? 'Following' : 'Follow'}
+                                </button>
+                                <button 
+                                    onClick={handleMessage}
+                                    className="bg-white text-black font-bold px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center"
+                                >
+                                    <MessageCircle size={16} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

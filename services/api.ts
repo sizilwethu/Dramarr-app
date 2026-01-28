@@ -91,6 +91,7 @@ export const api = {
                 avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
                 credits: 5,
                 coins: 100,
+                following: [],
                 ...additionalData
             });
             if(profileError) throw profileError;
@@ -289,6 +290,25 @@ export const api = {
     updateProfile: async (userId: string, updates: any) => {
         const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
         if (error) throw error;
+    },
+
+    toggleFollow: async (followerId: string, followingId: string) => {
+        const { data: profile } = await supabase.from('profiles').select('following').eq('id', followerId).single();
+        if (!profile) return;
+        
+        let newFollowing = [...(profile.following || [])];
+        const isFollowing = newFollowing.includes(followingId);
+        
+        if (isFollowing) {
+            newFollowing = newFollowing.filter(id => id !== followingId);
+            await supabase.rpc('decrement_follower_count', { profile_id: followingId });
+        } else {
+            newFollowing.push(followingId);
+            await supabase.rpc('increment_follower_count', { profile_id: followingId });
+        }
+        
+        await supabase.from('profiles').update({ following: newFollowing }).eq('id', followerId);
+        return !isFollowing;
     },
 
     // --- ADDING MISSING METHODS TO FIX ERRORS ---
