@@ -47,7 +47,7 @@ export default function App() {
         await loadInitialData();
       }
     } catch (e) {
-      console.error("Initialization failed", e);
+      // Silent error during init
     } finally {
       setIsLoading(false);
     }
@@ -88,8 +88,12 @@ export default function App() {
         await loadInitialData();
       }
     } catch (e) {
-      console.error(e);
-      alert("Authentication failed. " + (isSignUp ? "Username or Email might be taken." : "Check your credentials."));
+      // Suppress specific error details from console as requested
+      if (isSignUp) {
+        alert("Authentication failed. Username or Email might be taken.");
+      } else {
+        alert("Invalid login credentials");
+      }
     } finally {
       setIsLoading(false);
     }

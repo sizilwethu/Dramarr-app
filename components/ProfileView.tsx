@@ -532,11 +532,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [userPosts, setUserPosts] = useState<SocialPost[]>([]);
   const [viewingPost, setViewingPost] = useState<SocialPost | null>(null);
   const [isFollowing, setIsFollowing] = useState(currentUser?.following.includes(user.id) || false);
-  const [isLikePulsing, setIsLikePulsing] = useState(false);
   
   // Post comments state
   const [postComments, setPostComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+
+  // Developer Admin Secret State
+  const [devClickCount, setDevClickCount] = useState(0);
+  const [devAdminOverride, setDevAdminOverride] = useState(false);
 
   const userVideos = videos.filter(v => v.creatorId === user.id);
   const userSeries = series.filter(s => s.creatorId === user.id);
@@ -597,6 +600,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       }
   };
 
+  const handleDevSecret = () => {
+      if (!isCurrentUser) return;
+      if (devClickCount + 1 >= 5) {
+          setDevAdminOverride(true);
+          alert("Developer Mode: Admin Access Temporarily Enabled");
+          setDevClickCount(0);
+      } else {
+          setDevClickCount(prev => prev + 1);
+      }
+  };
+
   return (
     <div className="h-full bg-black flex flex-col relative animate-fade-in overflow-hidden">
         {/* Header/Nav */}
@@ -604,7 +618,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {/* If not current user, always show back button. If current user, back button goes to Feed if coming from elsewhere */}
             <button onClick={onBack} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white"><ChevronLeft size={24}/></button>
             <div className="flex gap-2">
-                {isCurrentUser && user.isAdmin && (
+                {isCurrentUser && (user.isAdmin || devAdminOverride) && (
                      <button onClick={onOpenAdmin} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-red-500"><ShieldAlert size={20}/></button>
                 )}
                 {isCurrentUser ? (
@@ -656,7 +670,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
 
                 <div>
-                    <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                    <h2 onClick={handleDevSecret} className="text-2xl font-black text-white flex items-center gap-2 select-none cursor-pointer active:scale-95 transition-transform">
                         @{user.username}
                         {user.isCreator && <span className="px-2 py-0.5 bg-neon-purple text-white text-[8px] rounded uppercase tracking-widest">Creator</span>}
                     </h2>

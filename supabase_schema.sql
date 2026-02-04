@@ -15,8 +15,6 @@
 
 -- 1. Create Tables (IF NOT EXISTS)
 -- Ensure profiles table has necessary columns (migrating if exists)
--- Note: 'profiles' table creation is usually handled by a trigger on auth.users, 
--- but we ensure the columns exist here for the public schema.
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   username text UNIQUE,
@@ -36,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   gender text,
   country text,
   state text,
-  city text, -- Added City
+  city text,
   address text,
   paypal_email text,
   subscription_status text DEFAULT 'free',
@@ -63,17 +61,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamp with time zone DEFAULT now()
 );
 
--- Add 'state' column if it doesn't exist (for existing tables)
+-- Add columns if they don't exist (migrations)
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'state') THEN
         ALTER TABLE public.profiles ADD COLUMN state text;
     END IF;
-END $$;
-
--- Add 'city' column if it doesn't exist (for existing tables)
-DO $$
-BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'city') THEN
         ALTER TABLE public.profiles ADD COLUMN city text;
     END IF;
@@ -115,6 +108,16 @@ CREATE TABLE IF NOT EXISTS public.series (
   CONSTRAINT series_pkey PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS public.stories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  segments_json text,
+  views integer DEFAULT 0,
+  privacy text DEFAULT 'public',
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT stories_pkey PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS public.posts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -151,10 +154,10 @@ CREATE TABLE IF NOT EXISTS public.view_logs (
 -- 2. Enable Row Level Security (RLS)
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.series ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.view_logs ENABLE ROW LEVEL SECURITY;
--- Profiles usually enabled by default if created via Supabase UI, but ensuring here
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- 3. Create Policies (Wrapped in DO block to emulate IF NOT EXISTS)
@@ -193,6 +196,17 @@ BEGIN
         CREATE POLICY "Users can update their own series" ON public.series FOR UPDATE USING (auth.uid() = creator_id);
     END IF;
 
+    -- Stories Policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'stories' AND policyname = 'Public stories are viewable by everyone') THEN
+        CREATE POLICY "Public stories are viewable by everyone" ON public.stories FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'stories' AND policyname = 'Users can insert their own stories') THEN
+        CREATE POLICY "Users can insert their own stories" ON public.stories FOR INSERT WITH CHECK (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'stories' AND policyname = 'Users can delete their own stories') THEN
+        CREATE POLICY "Users can delete their own stories" ON public.stories FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+
     -- Posts Policies
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'posts' AND policyname = 'Public posts are viewable by everyone') THEN
         CREATE POLICY "Public posts are viewable by everyone" ON public.posts FOR SELECT USING (true);
@@ -210,9 +224,16 @@ BEGIN
     END IF;
 
     -- View Logs Policies
+    -- Drop existing insecure policy if it exists to replace it with the secure one
+    DROP POLICY IF EXISTS "Users can insert view logs" ON public.view_logs;
+    
+    -- Create the secure INSERT policy
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'view_logs' AND policyname = 'Users can insert view logs') THEN
-        CREATE POLICY "Users can insert view logs" ON public.view_logs FOR INSERT WITH CHECK (true);
+        CREATE POLICY "Users can insert view logs" ON public.view_logs 
+        FOR INSERT 
+        WITH CHECK (auth.role() = 'authenticated' AND viewer_id = auth.uid());
     END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'view_logs' AND policyname = 'Users can view their own logs') THEN
         CREATE POLICY "Users can view their own logs" ON public.view_logs FOR SELECT USING (auth.uid() = viewer_id);
     END IF;
@@ -223,18 +244,24 @@ $$;
 
 -- Smart View Count Increment
 CREATE OR REPLACE FUNCTION increment_view_count(target_id uuid, table_name text)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   row_creator_id uuid;
   current_user_id uuid;
 BEGIN
   current_user_id := auth.uid();
   
-  -- Get the creator_id of the item
+  -- Validate table_name and get creator_id
   IF table_name = 'videos' THEN
     SELECT creator_id INTO row_creator_id FROM public.videos WHERE id = target_id;
   ELSIF table_name = 'posts' THEN
     SELECT user_id INTO row_creator_id FROM public.posts WHERE id = target_id;
+  ELSE
+    -- Exit if table_name is not allowed
+    RETURN;
   END IF;
 
   -- Only increment if the viewer is NOT the creator
@@ -242,35 +269,100 @@ BEGIN
     EXECUTE format('UPDATE public.%I SET views = views + 1 WHERE id = $1', table_name) USING target_id;
   END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Like Count Increment
 CREATE OR REPLACE FUNCTION increment_like_count(target_id uuid, table_name text)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
+  -- Validate table name to prevent SQL injection
+  IF table_name NOT IN ('videos', 'posts', 'comments') THEN
+    RAISE EXCEPTION 'Invalid table name';
+  END IF;
+  
   EXECUTE format('UPDATE public.%I SET likes = likes + 1 WHERE id = $1', table_name) USING target_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Follower Count Increments (for Profiles)
 CREATE OR REPLACE FUNCTION increment_follower_count(profile_id uuid)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   UPDATE public.profiles SET followers = followers + 1 WHERE id = profile_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
+-- Decrement Follower Count
 CREATE OR REPLACE FUNCTION decrement_follower_count(profile_id uuid)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   UPDATE public.profiles SET followers = GREATEST(0, followers - 1) WHERE id = profile_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Increment Series Total Episodes
 CREATE OR REPLACE FUNCTION increment_total_episodes(series_id_input uuid)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   UPDATE public.series SET total_episodes = total_episodes + 1 WHERE id = series_id_input;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
+
+-- Register View (Logs view and increments count safely)
+CREATE OR REPLACE FUNCTION register_view(video_id_input uuid, viewer_id_input uuid)
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Log the view if tracking history
+  INSERT INTO public.view_logs (video_id, viewer_id)
+  VALUES (video_id_input, viewer_id_input);
+
+  -- Increment the video counter
+  UPDATE public.videos SET views = views + 1 WHERE id = video_id_input;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Increment Story View
+CREATE OR REPLACE FUNCTION increment_story_view(story_id uuid)
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.stories SET views = views + 1 WHERE id = story_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 5. Login Error Logging (Requested Schema)
+-- Table to log login failures or invalid credential attempts
+CREATE TABLE IF NOT EXISTS public.login_error_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email_attempted text,
+  error_message text DEFAULT 'Invalid login credentials',
+  ip_address text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT login_error_logs_pkey PRIMARY KEY (id)
+);
+
+ALTER TABLE public.login_error_logs ENABLE ROW LEVEL SECURITY;
+
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'login_error_logs' AND policyname = 'Enable insert for anon') THEN
+    CREATE POLICY "Enable insert for anon" ON public.login_error_logs FOR INSERT WITH CHECK (true);
+  END IF;
+END $$;

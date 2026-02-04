@@ -59,7 +59,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
   const handleSubmit = () => {
       const additionalData = !isLogin ? { firstName, lastName, gender, dob, country, state, city } : undefined;
-      onLogin(email, password, !isLogin, username, additionalData);
+      // Trim inputs to prevent accidental spaces
+      onLogin(email.trim(), password.trim(), !isLogin, username.trim(), additionalData);
   };
 
   const handleResetPassword = async () => {
@@ -69,7 +70,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       }
       setIsResetting(true);
       try {
-          await api.resetPassword(resetEmail);
+          await api.resetPassword(resetEmail.trim());
           setResetSuccess(true);
       } catch (e) {
           alert("Failed to send reset email. Please check the address.");

@@ -114,7 +114,7 @@ export const api = {
             if (error) throw error;
             return data;
         } catch (e) {
-            console.error("SignIn error", e);
+            // Suppress console logging of specific auth errors to maintain generic error policy
             throw e;
         }
     },
