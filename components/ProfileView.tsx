@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Video, Series, CATEGORIES, Conversation } from '../types';
+import { User, Video, Series, CATEGORIES, Conversation, SocialPost, Comment } from '../types';
 import { api } from '../services/api';
 import { 
   Settings, Grid as GridIcon, Folder, Play, BarChart3, ChevronLeft, 
@@ -9,11 +9,13 @@ import {
   Calendar, MapPin, UserCheck, ShieldAlert, Megaphone, FileText, LockKeyhole, UserPlus, EyeOff,
   Sparkles, Smartphone, HeartPulse, HardDrive, Wallet, ShieldCheck, Zap,
   Instagram, Youtube, Accessibility, Database, Link2, Trash, Eye, Music, Navigation, Landmark,
-  Smartphone as PhoneIcon, Key, History, Fingerprint, RefreshCcw, Download, UserMinus, AlertCircle, MessageCircle
+  Smartphone as PhoneIcon, Key, History, Fingerprint, RefreshCcw, Download, UserMinus, AlertCircle, MessageCircle, MoreHorizontal, Send
 } from 'lucide-react';
+import { VideoPlayer } from './VideoPlayer';
 
 interface ProfileViewProps {
-  user: User;
+  user: User; // The user profile being viewed
+  currentUser?: User; // The logged-in user
   videos: Video[];
   series: Series[];
   onLogout: () => void;
@@ -25,9 +27,9 @@ interface ProfileViewProps {
   onOpenAnalytics: () => void;
   onOpenAds: () => void;
   onOpenRides: () => void;
-  viewingUserId?: string;
   onBack: () => void;
   onMessageUser?: (partner: Conversation) => void;
+  isCurrentUser: boolean;
 }
 
 const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, onClose: () => void, onLogout: () => void, onUpdateUser: (d: any) => void }) => {
@@ -142,7 +144,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Legal First Name</label>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">First Name</label>
                     <input 
                         type="text" 
                         value={formData.firstName}
@@ -152,7 +154,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
                     />
                 </div>
                 <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Legal Last Name</label>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Last Name</label>
                     <input 
                         type="text" 
                         value={formData.lastName}
@@ -162,16 +164,50 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
                     />
                 </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Date of Birth</label>
+                    <input 
+                        type="date" 
+                        value={formData.dob}
+                        readOnly={user.isVerified}
+                        onChange={e => setFormData({...formData, dob: e.target.value})}
+                        className={`w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none font-bold ${user.isVerified ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Country</label>
+                    <input 
+                        type="text" 
+                        value={formData.country}
+                        onChange={e => setFormData({...formData, country: e.target.value})}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none font-bold"
+                        placeholder="Country"
+                    />
+                </div>
+            </div>
+            
+            {user.isVerified && <p className="text-[9px] text-blue-400 -mt-4 font-black uppercase italic tracking-widest">Locked: Verified accounts cannot modify legal identity.</p>}
+
             <div>
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Date of Birth</label>
-                <input 
-                    type="date" 
-                    value={formData.dob}
-                    readOnly={user.isVerified}
-                    onChange={e => setFormData({...formData, dob: e.target.value})}
-                    className={`w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none font-bold ${user.isVerified ? 'opacity-50 cursor-not-allowed' : ''}`}
-                />
-                {user.isVerified && <p className="text-[9px] text-blue-400 mt-2 font-black uppercase italic tracking-widest">Locked: Verified accounts cannot modify legal identity.</p>}
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Email Address</label>
+              <input 
+                type="email" 
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">PayPal Email</label>
+              <input 
+                type="email" 
+                value={formData.paypalEmail}
+                onChange={e => setFormData({...formData, paypalEmail: e.target.value})}
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-white focus:border-neon-purple outline-none font-bold"
+                placeholder="For payouts"
+              />
             </div>
             
             <div className="pt-4 flex gap-3">
@@ -470,201 +506,402 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
   );
 };
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user: currentUser, videos, series, onLogout, onOpenAdmin, onUpdateUser, onDeleteAccount, onDeleteVideo, onRemoveProfilePic, onOpenAnalytics, onOpenAds, onOpenRides, viewingUserId, onBack, onMessageUser }) => {
-  const [activeTab, setActiveTab] = useState<'grid' | 'series'>('grid');
-  const [profileUser, setProfileUser] = useState<User>(currentUser);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id;
-  const [isFollowing, setIsFollowing] = useState(currentUser.following.includes(viewingUserId || ''));
+export const ProfileView: React.FC<ProfileViewProps> = ({ 
+  user, 
+  currentUser,
+  videos, 
+  series,
+  onLogout, 
+  onOpenAdmin, 
+  onUpdateUser,
+  onDeleteAccount,
+  onDeleteVideo,
+  onRemoveProfilePic,
+  onOpenAnalytics,
+  onOpenAds,
+  onOpenRides,
+  onBack,
+  onMessageUser,
+  isCurrentUser
+}) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<'videos' | 'series' | 'posts' | 'likes'>('videos');
+  
+  // States for viewing content
+  const [playingVideo, setPlayingVideo] = useState<Video | null>(null);
+  const [userPosts, setUserPosts] = useState<SocialPost[]>([]);
+  const [viewingPost, setViewingPost] = useState<SocialPost | null>(null);
+  const [isFollowing, setIsFollowing] = useState(currentUser?.following.includes(user.id) || false);
+  const [isLikePulsing, setIsLikePulsing] = useState(false);
+  
+  // Post comments state
+  const [postComments, setPostComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
 
-  const userVideos = videos.filter(v => v.creatorId === profileUser.id);
-  const userSeries = series.filter(s => s.creatorId === profileUser.id);
+  const userVideos = videos.filter(v => v.creatorId === user.id);
+  const userSeries = series.filter(s => s.creatorId === user.id);
+  
+  useEffect(() => {
+    // Check follow status whenever users change
+    if (currentUser) {
+        setIsFollowing(currentUser.following.includes(user.id));
+    }
+  }, [user.id, currentUser]);
 
   useEffect(() => {
-      if (viewingUserId && viewingUserId !== currentUser.id) {
-          api.getUserProfile(viewingUserId).then(u => { if(u) setProfileUser(u); });
-          setIsFollowing(currentUser.following.includes(viewingUserId));
-      }
-      else setProfileUser(currentUser);
-  }, [viewingUserId, currentUser]);
-
-  const handleFollow = async () => {
-    if (!viewingUserId || isOwnProfile) return;
-    try {
-        const isNowFollowing = await api.toggleFollow(currentUser.id, viewingUserId);
-        setIsFollowing(isNowFollowing || false);
-        // Sync local user state
-        const newFollowing = isNowFollowing 
-            ? [...currentUser.following, viewingUserId]
-            : currentUser.following.filter(id => id !== viewingUserId);
-        onUpdateUser({ following: newFollowing });
-    } catch (e) {
-        console.error(e);
+    const fetchUserPosts = async () => {
+        const posts = await api.getSocialPosts(); // In a real app, filter by user.id via API
+        setUserPosts(posts.filter(p => p.userId === user.id));
+    };
+    if (activeTab === 'posts') {
+        fetchUserPosts();
     }
+  }, [activeTab, user.id]);
+
+  useEffect(() => {
+      if (viewingPost) {
+          const loadComments = async () => {
+              const comments = await api.getComments(viewingPost.id, 'post');
+              setPostComments(comments);
+          };
+          loadComments();
+      }
+  }, [viewingPost]);
+
+  const handleToggleFollow = async () => {
+      if (!currentUser) return;
+      try {
+          const newStatus = await api.toggleFollow(currentUser.id, user.id);
+          setIsFollowing(!!newStatus);
+          // Notify parent app to update current user state
+          const newFollowingList = newStatus 
+             ? [...currentUser.following, user.id]
+             : currentUser.following.filter(id => id !== user.id);
+          // We call onUpdateUser but it needs to apply to CURRENT user, 
+          // App.tsx handles this logic based on context
+          api.updateProfile(currentUser.id, { following: newFollowingList });
+      } catch (e) {
+          console.error("Follow error", e);
+      }
   };
 
-  const handleMessage = () => {
-      if (!onMessageUser || isOwnProfile) return;
-      onMessageUser({
-          partnerId: profileUser.id,
-          username: profileUser.username,
-          avatarUrl: profileUser.avatarUrl,
-          lastMessage: '',
-          timestamp: Date.now(),
-          unreadCount: 0
-      });
+  const handlePostComment = async () => {
+      if (!newComment.trim() || !viewingPost || !currentUser) return;
+      try {
+          await api.postComment(currentUser.id, viewingPost.id, newComment, 'post');
+          setNewComment('');
+          const updatedComments = await api.getComments(viewingPost.id, 'post');
+          setPostComments(updatedComments);
+      } catch (e) {
+          console.error(e);
+      }
   };
 
   return (
-    <div className="h-full bg-black overflow-y-auto animate-fade-in no-scrollbar">
-      {isSettingsOpen && (
-        <SettingsModal 
-          user={currentUser} 
-          onClose={() => setIsSettingsOpen(false)} 
-          onLogout={onLogout} 
-          onUpdateUser={onUpdateUser}
-        />
-      )}
-      
-      <div className="max-w-6xl mx-auto w-full pt-12 md:pt-10 pb-20">
-          
-          <div className="px-6 md:px-12 mb-4 flex justify-between items-center">
-              <button onClick={onBack} className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors p-2">
-                  <ChevronLeft size={28} /> <span className="font-bold uppercase text-[10px] tracking-[0.3em] hidden sm:inline">Return</span>
-              </button>
-              
-              <div className="flex items-center gap-3">
-                  {isOwnProfile && (
-                    <button 
-                      onClick={onOpenRides}
-                      className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-full text-blue-400 hover:text-blue-300 transition-all shadow-lg active:scale-90"
-                    >
-                      <Navigation size={24} />
-                    </button>
-                  )}
-                  {isOwnProfile && (
-                    <button 
-                      onClick={onOpenAds}
-                      className="p-3 bg-pink-900/20 border border-pink-500/30 rounded-full text-pink-400 hover:text-pink-300 transition-all shadow-lg active:scale-90"
-                    >
-                      <Megaphone size={24} />
-                    </button>
-                  )}
-                  {isOwnProfile && currentUser.isAdmin && (
-                    <button 
-                      onClick={onOpenAdmin}
-                      className="p-3 bg-red-900/20 border border-red-500/30 rounded-full text-red-400 hover:text-red-300 transition-all shadow-lg shadow-red-500/10 active:scale-90"
-                    >
-                      <ShieldAlert size={24} />
-                    </button>
-                  )}
-                  {isOwnProfile && (
-                    <button 
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="p-3 bg-gray-900 border border-gray-800 rounded-full text-gray-400 hover:text-white transition-all shadow-lg active:scale-90"
-                    >
-                      <Settings size={24} />
-                    </button>
-                  )}
-              </div>
-          </div>
-
-          <div className="px-6 md:px-12 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8">
-            <div className="relative shrink-0">
-                <img src={profileUser.avatarUrl} className="w-32 h-32 md:w-40 md:h-40 rounded-[48px] border-4 border-neon-purple object-cover shadow-2xl" />
-                {profileUser.isVerified && <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-500 rounded-2xl flex items-center justify-center border-4 border-black text-white"><ShieldCheck size={20} /></div>}
+    <div className="h-full bg-black flex flex-col relative animate-fade-in overflow-hidden">
+        {/* Header/Nav */}
+        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+            {/* If not current user, always show back button. If current user, back button goes to Feed if coming from elsewhere */}
+            <button onClick={onBack} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white"><ChevronLeft size={24}/></button>
+            <div className="flex gap-2">
+                {isCurrentUser && user.isAdmin && (
+                     <button onClick={onOpenAdmin} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-red-500"><ShieldAlert size={20}/></button>
+                )}
+                {isCurrentUser ? (
+                    <button onClick={() => setShowSettings(true)} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white"><Settings size={20}/></button>
+                ) : (
+                    <button className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white"><MoreHorizontal size={20}/></button>
+                )}
             </div>
-            
-            <div className="flex-1 text-center md:text-left">
-                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">@{profileUser.username}</h2>
-                    <div className="flex gap-3 justify-center">
-                        {isOwnProfile ? (
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+            {/* Cover Photo Area (Mock) */}
+            <div className="h-48 bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 relative">
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1200&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
+            </div>
+
+            {/* Profile Header Info */}
+            <div className="px-4 -mt-16 relative mb-6">
+                <div className="flex justify-between items-end mb-4">
+                    <div className="relative">
+                        <img src={user.avatarUrl} className="w-28 h-28 rounded-full border-4 border-black object-cover bg-gray-900" />
+                        {user.isVerified && (
+                             <div className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-2 border-black">
+                                <ShieldCheck size={14} />
+                             </div>
+                        )}
+                    </div>
+                    <div className="flex gap-3 mb-2">
+                         {!isCurrentUser ? (
                             <>
-                                <button onClick={() => setIsSettingsOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all">Profile Hub</button>
-                                <button onClick={onOpenAnalytics} className="bg-purple-900/40 text-purple-400 font-bold px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-purple-500/30 flex items-center gap-2 hover:bg-purple-900/60 transition-all"><BarChart3 size={16}/> Stats</button>
-                            </>
-                        ) : (
-                            <div className="flex gap-2">
                                 <button 
-                                    onClick={handleFollow}
-                                    className={`font-bold px-10 py-2 rounded-xl text-[10px] uppercase tracking-widest shadow-lg transition-all ${isFollowing ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'bg-neon-pink text-white shadow-neon-pink/20 hover:scale-105'}`}
+                                    onClick={handleToggleFollow}
+                                    className={`px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all ${isFollowing ? 'bg-gray-800 text-white border border-white/20' : 'bg-neon-pink text-white shadow-lg shadow-neon-pink/30'}`}
                                 >
                                     {isFollowing ? 'Following' : 'Follow'}
                                 </button>
-                                <button 
-                                    onClick={handleMessage}
-                                    className="bg-white text-black font-bold px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center"
-                                >
-                                    <MessageCircle size={16} />
+                                <button onClick={() => onMessageUser?.({ partnerId: user.id, username: user.username, avatarUrl: user.avatarUrl, lastMessage: '', timestamp: Date.now(), unreadCount: 0 })} className="p-2.5 bg-gray-800 rounded-full text-white border border-white/10 active:scale-95 transition-transform">
+                                    <MessageCircle size={20}/>
                                 </button>
+                            </>
+                         ) : (
+                            <>
+                                <button onClick={onOpenAds} className="px-5 py-2 bg-gray-900 border border-white/10 rounded-full text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/5 transition-colors">Ads Manager</button>
+                                <button onClick={onOpenRides} className="px-5 py-2 bg-gray-900 border border-white/10 rounded-full text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/5 transition-colors">Driver Mode</button>
+                            </>
+                         )}
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                        @{user.username}
+                        {user.isCreator && <span className="px-2 py-0.5 bg-neon-purple text-white text-[8px] rounded uppercase tracking-widest">Creator</span>}
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-2 font-medium leading-relaxed max-w-md">{user.bio || "No biography yet."}</p>
+                    
+                    {/* Stats */}
+                    <div className="flex gap-6 mt-4">
+                        <div className="flex items-center gap-1">
+                            <span className="font-black text-white">{user.following.length}</span>
+                            <span className="text-xs text-gray-500 uppercase font-bold">Following</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="font-black text-white">{user.followers}</span>
+                            <span className="text-xs text-gray-500 uppercase font-bold">Followers</span>
+                        </div>
+                        {isCurrentUser && (
+                            <div className="flex items-center gap-1">
+                                <span className="font-black text-white">{user.coins}</span>
+                                <span className="text-xs text-gray-500 uppercase font-bold">Coins</span>
                             </div>
                         )}
                     </div>
                 </div>
-                
-                <div className="flex justify-center md:justify-start gap-8 mb-6">
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.followers}</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">fans</span></div>
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">{profileUser.following.length}</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">following</span></div>
-                    <div className="flex gap-2 items-baseline"><span className="font-black text-xl text-white">12.5k</span><span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">likes</span></div>
-                </div>
-                
-                <p className="text-gray-400 text-lg leading-relaxed max-w-2xl mb-6">{profileUser.bio || "A blank script awaits your story."}</p>
+            </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-900/40 rounded-[32px] border border-gray-800/50 max-w-2xl">
-                    <div className="flex items-center gap-2 text-gray-400">
-                        <Calendar size={14} className="text-neon-purple" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">{new Date(profileUser.joinDate).toLocaleDateString()}</span>
+            {/* Tabs */}
+            <div className="border-b border-white/10 flex sticky top-0 bg-black/80 backdrop-blur-xl z-20">
+                <button 
+                    onClick={() => setActiveTab('videos')}
+                    className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === 'videos' ? 'text-white border-b-2 border-white' : 'text-gray-500'}`}
+                >
+                    <GridIcon size={16} className="mx-auto mb-1" /> Videos
+                </button>
+                <button 
+                    onClick={() => setActiveTab('series')}
+                    className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === 'series' ? 'text-white border-b-2 border-white' : 'text-gray-500'}`}
+                >
+                    <Folder size={16} className="mx-auto mb-1" /> Series
+                </button>
+                <button 
+                    onClick={() => setActiveTab('posts')}
+                    className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === 'posts' ? 'text-white border-b-2 border-white' : 'text-gray-500'}`}
+                >
+                    <Globe size={16} className="mx-auto mb-1" /> Social
+                </button>
+                {isCurrentUser && (
+                    <button 
+                        onClick={() => setActiveTab('likes')}
+                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === 'likes' ? 'text-white border-b-2 border-white' : 'text-gray-500'}`}
+                    >
+                        <HeartPulse size={16} className="mx-auto mb-1" /> Likes
+                    </button>
+                )}
+            </div>
+
+            {/* Grid Content */}
+            <div className="p-1 min-h-[300px]">
+                {activeTab === 'videos' && (
+                    <div className="grid grid-cols-3 gap-1">
+                        {userVideos.length > 0 ? userVideos.map(video => (
+                            <div 
+                                key={video.id} 
+                                className="aspect-[3/4] bg-gray-900 relative group cursor-pointer"
+                                onClick={() => setPlayingVideo(video)}
+                            >
+                                <img src={video.thumbnailUrl} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white pointer-events-none">
+                                    <Play size={24} fill="white" />
+                                    <span className="font-bold text-sm">{video.views}</span>
+                                </div>
+                                {isCurrentUser && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onDeleteVideo(video.id); }}
+                                        className="absolute top-1 right-1 p-1.5 bg-black/60 hover:bg-red-500/80 backdrop-blur-sm rounded-full text-white transition-colors z-10"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                )}
+                            </div>
+                        )) : (
+                            <div className="col-span-3 py-20 text-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                                No videos uploaded
+                            </div>
+                        )}
                     </div>
-                    {profileUser.country && (
-                        <div className="flex items-center gap-2 text-gray-400">
-                            <MapPin size={14} className="text-neon-pink" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">{profileUser.country}</span>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-2 text-gray-400">
-                        <UserCheck size={14} className="text-blue-400" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">{profileUser.subscriptionStatus} Account</span>
+                )}
+                
+                {activeTab === 'series' && (
+                    <div className="grid grid-cols-2 gap-4 p-4">
+                         {userSeries.length > 0 ? userSeries.map(s => (
+                             <div key={s.id} className="bg-gray-900 rounded-xl overflow-hidden border border-white/5">
+                                 <div className="aspect-video relative">
+                                     <img src={s.coverUrl} className="w-full h-full object-cover" />
+                                     <div className="absolute bottom-2 right-2 bg-black/60 px-2 py-1 rounded text-[9px] font-black text-white uppercase">{s.totalEpisodes} Eps</div>
+                                 </div>
+                                 <div className="p-3">
+                                     <h4 className="text-sm font-bold text-white truncate">{s.title}</h4>
+                                     <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{s.category}</p>
+                                 </div>
+                             </div>
+                         )) : (
+                            <div className="col-span-2 py-20 text-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                                No series created
+                            </div>
+                         )}
                     </div>
+                )}
+
+                {activeTab === 'posts' && (
+                    <div className="grid grid-cols-3 gap-1">
+                        {userPosts.length > 0 ? userPosts.map(post => (
+                            <div key={post.id} onClick={() => setViewingPost(post)} className="aspect-square bg-gray-900 relative group cursor-pointer overflow-hidden">
+                                {post.mediaUrl ? (
+                                    post.mediaType === 'video' ? (
+                                        <video src={post.mediaUrl} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <img src={post.mediaUrl} className="w-full h-full object-cover" />
+                                    )
+                                ) : (
+                                    <div className="w-full h-full p-2 flex items-center justify-center text-[10px] text-gray-400 text-center leading-tight">
+                                        {post.content.slice(0, 50)}...
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white pointer-events-none">
+                                    <MessageCircle size={20} fill="white" />
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="col-span-3 py-20 text-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                                No social posts
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {activeTab === 'likes' && (
+                    <div className="col-span-3 py-20 text-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                        Private Collection
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* Settings Modal */}
+        {showSettings && (
+            <SettingsModal 
+                user={user} 
+                onClose={() => setShowSettings(false)} 
+                onLogout={onLogout}
+                onUpdateUser={onUpdateUser}
+            />
+        )}
+
+        {/* Video Player Overlay */}
+        {playingVideo && currentUser && (
+            <div className="fixed inset-0 z-[100] bg-black animate-fade-in flex flex-col">
+                <button 
+                    onClick={() => setPlayingVideo(null)} 
+                    className="absolute top-4 left-4 z-[110] p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors"
+                >
+                    <ChevronLeft size={28} />
+                </button>
+                <div className="flex-1 w-full relative">
+                    <VideoPlayer 
+                        video={playingVideo}
+                        isActive={true}
+                        isUnlocked={!playingVideo.isLocked || currentUser.unlockedVideoIds.includes(playingVideo.id)}
+                        onUnlock={() => {}}
+                        onWatchAd={() => {}}
+                        isFollowing={isFollowing}
+                        onToggleFollow={handleToggleFollow}
+                        isOwner={isCurrentUser}
+                        onDelete={() => {}} 
+                        currentUser={currentUser}
+                    />
                 </div>
             </div>
-          </div>
+        )}
 
-          <div className="flex border-t border-gray-900 sticky top-0 bg-black z-20">
-            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'grid' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('grid')}><GridIcon size={20} /> <span className="font-black uppercase tracking-[0.3em] text-[10px]">Library</span></button>
-            <button className={`flex-1 py-5 flex items-center justify-center gap-3 transition-all ${activeTab === 'series' ? 'border-b-2 border-white text-white bg-white/5' : 'text-gray-500 hover:text-gray-300'}`} onClick={() => setActiveTab('series')}><Folder size={20} /> <span className="font-black uppercase tracking-[0.3em] text-[10px]">Series</span></button>
-          </div>
+        {/* Post View Modal */}
+        {viewingPost && currentUser && (
+            <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex flex-col animate-fade-in">
+               <div className="p-4 flex justify-between items-center border-b border-white/10 shrink-0 pt-12">
+                <button onClick={() => setViewingPost(null)} className="text-gray-400 hover:text-white flex items-center gap-1.5">
+                  <ChevronLeft size={20} /> <span className="font-black uppercase text-[9px] tracking-widest">Back</span>
+                </button>
+                <h2 className="text-lg font-black italic tracking-tighter uppercase text-white">Post Details</h2>
+                <div className="w-10"></div>
+              </div>
 
-          <div className="p-4">
-            {activeTab === 'grid' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    {userVideos.map(v => (
-                        <div key={v.id} className="relative aspect-[3/4] bg-gray-900 rounded-[32px] overflow-hidden group cursor-pointer border border-white/5 shadow-2xl">
-                             <img src={v.thumbnailUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
-                                 <div className="flex items-center gap-2 text-white font-black text-xs uppercase tracking-widest"><Play size={12} fill="white" /> {v.likes}</div>
-                             </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                     {userSeries.map(s => (
-                         <div key={s.id} className="bg-gray-900/40 rounded-[48px] overflow-hidden border border-white/5 hover:bg-gray-800 transition-all cursor-pointer group flex shadow-xl">
-                             <div className="w-32 aspect-[3/4] relative shrink-0">
-                                 <img src={s.coverUrl} className="w-full h-full object-cover" />
-                             </div>
-                             <div className="p-8 flex flex-col justify-center min-w-0">
-                                 <h4 className="font-black text-white text-xl truncate mb-1 group-hover:text-neon-purple transition-colors uppercase italic tracking-tighter">{s.title}</h4>
-                                 <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em] mb-3">{s.category} • {s.totalEpisodes} Eps</p>
-                                 <div className="bg-white/5 w-fit px-4 py-1.5 rounded-full text-[9px] text-gray-400 font-black uppercase tracking-widest border border-white/5">{s.year}</div>
-                             </div>
-                         </div>
-                     ))}
-                 </div>
-            )}
-          </div>
-      </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar pb-32">
+                  <div className="flex gap-3 mb-6 pb-6 border-b border-white/5">
+                    <img src={viewingPost.avatarUrl} className="w-10 h-10 rounded-full border border-white/10" />
+                    <div className="flex-1">
+                       <h3 className="font-bold text-white text-sm">@{viewingPost.username}</h3>
+                       <p className="text-xs text-gray-400 mt-1">{viewingPost.content}</p>
+                       {viewingPost.mediaUrl && (
+                           <div className="mt-3 rounded-xl overflow-hidden max-h-48 w-full border border-white/5">
+                               {viewingPost.mediaType === 'video' ? (
+                                   <video src={viewingPost.mediaUrl} className="w-full h-full object-cover" controls />
+                               ) : (
+                                   <img src={viewingPost.mediaUrl || ''} className="w-full h-full object-cover" />
+                               )}
+                           </div>
+                       )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                       {postComments.length > 0 ? postComments.map(c => (
+                           <div key={c.id} className="flex gap-3 animate-fade-in">
+                               <img src={c.avatarUrl} className="w-7 h-7 rounded-full border border-white/10 shrink-0" />
+                               <div className="flex-1">
+                                 <div className="bg-gray-900/50 rounded-2xl p-3 border border-white/5">
+                                   <span className="font-bold text-white text-[10px]">@{c.username}</span>
+                                   <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{c.text}</p>
+                                 </div>
+                               </div>
+                           </div>
+                       )) : (
+                         <div className="text-center py-20 text-gray-600 font-bold uppercase text-[9px] tracking-widest">No comments yet</div>
+                       )}
+                  </div>
+              </div>
+
+              <div className="p-4 bg-black border-t border-white/10 pb-10">
+                  <div className="flex gap-2 bg-gray-900 rounded-[20px] p-1.5 border border-white/10">
+                    <input 
+                      type="text" 
+                      value={newComment}
+                      onChange={e => setNewComment(e.target.value)}
+                      placeholder="Comment..."
+                      className="flex-1 bg-transparent px-3 text-[11px] text-white focus:outline-none"
+                    />
+                    <button 
+                      onClick={handlePostComment}
+                      disabled={!newComment.trim()}
+                      className="bg-neon-purple text-white p-2 rounded-full active:scale-95 disabled:opacity-50"
+                    >
+                      <Send size={14} />
+                    </button>
+                  </div>
+              </div>
+            </div>
+        )}
     </div>
   );
 };

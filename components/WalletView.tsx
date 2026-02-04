@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, WalletTransaction } from '../types';
+import { api } from '../services/api';
 import { ChevronLeft, Plus, TrendingUp, TrendingDown, CreditCard, Landmark, ArrowUpRight, X, CheckCircle2, Zap, DollarSign } from 'lucide-react';
 
 interface WalletViewProps {
@@ -25,30 +26,40 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, onUpdateUser, onBa
   const [isSuccess, setIsSuccess] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>(MOCK_TRANS);
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     setIsProcessing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
-      
-      const newBalance = user.walletBalance + selectedAmount;
-      onUpdateUser({ walletBalance: newBalance });
-      
-      const newTrans: WalletTransaction = {
-        id: 't_' + Date.now(),
-        amount: selectedAmount,
-        type: 'credit',
-        description: `Funds Added via ${selectedMethod === 'card' ? 'Credit Card' : selectedMethod === 'paypal' ? 'PayPal' : 'Google Pay'}`,
-        timestamp: Date.now()
-      };
-      setTransactions([newTrans, ...transactions]);
+    try {
+        // Simulate processing delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Update user balance in database
+        const newBalance = (user.walletBalance || 0) + selectedAmount;
+        await api.updateProfile(user.id, { wallet_balance: newBalance });
+        
+        // Update local state
+        onUpdateUser({ walletBalance: newBalance });
+        
+        // Record mock transaction
+        const newTrans: WalletTransaction = {
+            id: 't_' + Date.now(),
+            amount: selectedAmount,
+            type: 'credit',
+            description: `Funds Added via ${selectedMethod === 'card' ? 'Credit Card' : selectedMethod === 'paypal' ? 'PayPal' : 'Google Pay'}`,
+            timestamp: Date.now()
+        };
+        setTransactions([newTrans, ...transactions]);
+        setIsSuccess(true);
 
-      setTimeout(() => {
-        setIsSuccess(false);
-        setShowAddFunds(false);
-      }, 2000);
-    }, 1500);
+        setTimeout(() => {
+            setIsSuccess(false);
+            setShowAddFunds(false);
+        }, 2000);
+    } catch (e) {
+        console.error(e);
+        alert("Deposit failed. Please try again.");
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   return (
@@ -204,12 +215,31 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, onUpdateUser, onBa
                 <button 
                   onClick={handleDeposit}
                   disabled={isProcessing}
-                  className="w-full bg-blue-600 text-white py-5 rounded-[28px] font-black uppercase text-sm tracking-widest shadow-2xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className={`w-full py-5 rounded-[28px] font-black uppercase text-sm tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 ${
+                      selectedMethod === 'googlepay' 
+                      ? 'bg-white text-black hover:bg-gray-100' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20'
+                  }`}
                 >
                   {isProcessing ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className={`w-5 h-5 border-2 rounded-full animate-spin ${selectedMethod === 'googlepay' ? 'border-gray-300 border-t-black' : 'border-white/30 border-t-white'}`} />
                   ) : (
-                    <>Deposit ${selectedAmount.toFixed(2)}</>
+                    <>
+                        {selectedMethod === 'googlepay' && <span className="mr-1">Pay with</span>}
+                        {selectedMethod === 'googlepay' ? (
+                             <span className="font-bold flex items-center gap-0.5">
+                                <span className="text-blue-500">G</span>
+                                <span className="text-red-500">o</span>
+                                <span className="text-yellow-500">o</span>
+                                <span className="text-blue-500">g</span>
+                                <span className="text-green-500">l</span>
+                                <span className="text-red-500">e</span>
+                                <span className="text-gray-500 ml-0.5">Pay</span>
+                            </span>
+                        ) : (
+                            `Deposit $${selectedAmount.toFixed(2)}`
+                        )}
+                    </>
                   )}
                 </button>
               </div>

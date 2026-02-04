@@ -1,17 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Story, SocialPost, User, Comment, CommunityMood, Conversation, Message } from '../types';
+import { Story, SocialPost, User, Comment, Conversation, Message } from '../types';
 import { api } from '../services/api';
-import { MOCK_POSTS, MOCK_STORIES, MOCK_CONVERSATIONS, MOCK_CHAT_MESSAGES } from '../services/mockData';
-import { Heart, MessageSquare, Send, Plus, MoreHorizontal, X, RotateCcw, Sparkles, Radio, Vote, Users, Camera, FileVideo, ShieldCheck, ChevronLeft, PenSquare, Flame, Laugh, Smile, Frown, Reply, Image as ImageIcon, Search } from 'lucide-react';
+import { Heart, MessageSquare, Send, Plus, MoreHorizontal, X, RotateCcw, Users, Camera, FileVideo, ShieldCheck, ChevronLeft, PenSquare, Flame, Laugh, Smile, Frown, Reply, Image as ImageIcon, Search, Share2, Flag, Link2, CornerDownRight, Timer, BellOff, Ban, CheckCheck, Mail, User as UserIcon, AlertCircle, Sparkles } from 'lucide-react';
 import { StoryPlayer } from './StoryPlayer';
 import { StoryCreator } from './StoryCreator';
-
-const MOCK_MOODS: CommunityMood[] = [
-    { label: 'Suspense', percentage: 72, color: 'bg-neon-purple' },
-    { label: 'Romance', percentage: 18, color: 'bg-neon-pink' },
-    { label: 'Shock', percentage: 10, color: 'bg-yellow-500' },
-];
 
 const REACTION_TYPES = [
   { icon: Heart, color: 'text-neon-pink', label: 'Like' },
@@ -35,12 +28,12 @@ export const SocialView: React.FC<{
 }> = ({ currentUser, stories: initialStories, posts: initialPosts, onDeletePost, onDeleteStory, onRefresh, onBack, onChatStateChange, initialPartner, onClearTarget }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'inbox'>(initialPartner ? 'inbox' : 'feed');
   
-  // Use Mocks as initial state
-  const [posts, setPosts] = useState<SocialPost[]>(MOCK_POSTS);
-  const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
+  // Real Data State
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeMood, setActiveMood] = useState<CommunityMood>(MOCK_MOODS[0]);
   
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
   const [isCreatingStory, setIsCreatingStory] = useState(false);
@@ -59,14 +52,17 @@ export const SocialView: React.FC<{
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
-  // Inbox State - initialized with mocks
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+  // Inbox State
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(initialPartner || null);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Feedback State
+  const [postFeedback, setPostFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     if (initialPartner) {
@@ -77,8 +73,9 @@ export const SocialView: React.FC<{
   }, [initialPartner]);
 
   useEffect(() => {
-    // Optionally still try to load from API but keep mocks as base
+    loadPosts();
     loadStories();
+    
     if (selectedPostForComments) {
       loadComments(selectedPostForComments.id);
     }
@@ -99,24 +96,45 @@ export const SocialView: React.FC<{
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  const loadPosts = async () => {
+    setIsLoadingPosts(true);
+    try {
+      const data = await api.getSocialPosts();
+      setPosts(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+
   const loadStories = async () => {
     try {
       const data = await api.getStories();
-      if (data && data.length > 0) {
-          setStories([...MOCK_STORIES, ...data]);
-      }
+      // Ensure we set data or empty array, no mock fallbacks
+      setStories(data || []);
     } catch (e) {
       console.error(e);
+      setStories([]);
     }
+  };
+
+  const handleStoryDelete = async (storyId: string) => {
+      try {
+          await api.deleteStory(storyId);
+          setStories(prev => prev.filter(s => s.id !== storyId));
+          onDeleteStory(storyId); // Propagate up if needed
+          setSelectedStoryIndex(null); // Close player
+      } catch (e) {
+          console.error("Failed to delete story", e);
+      }
   };
 
   const loadConversations = async () => {
     setIsLoadingConversations(true);
     try {
       const data = await api.getConversations(currentUser.id);
-      if (data && data.length > 0) {
-          setConversations(data);
-      }
+      setConversations(data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -128,12 +146,7 @@ export const SocialView: React.FC<{
     if (!selectedConversation) return;
     try {
       const data = await api.getMessages(currentUser.id, selectedConversation.partnerId);
-      // Fallback to MOCK_CHAT_MESSAGES if no real data found for demonstration
-      if (data && data.length > 0) {
-        setChatMessages(data);
-      } else if (selectedConversation.partnerId === 'u1') {
-        setChatMessages(MOCK_CHAT_MESSAGES);
-      }
+      setChatMessages(data || []);
     } catch (e) {
       console.error(e);
     }
@@ -169,13 +182,19 @@ export const SocialView: React.FC<{
     if (!newComment.trim() || !selectedPostForComments) return;
     setIsSubmittingComment(true);
     try {
-      await api.postComment(currentUser.id, selectedPostForComments.id, newComment, replyTo?.id);
+      await api.postComment(currentUser.id, selectedPostForComments.id, newComment, 'post', replyTo?.id);
       setNewComment('');
       setReplyTo(null);
       await loadComments(selectedPostForComments.id);
+      
+      // Fetch authoritative stats
+      const stats = await api.getPostStats(selectedPostForComments.id);
+      
       setPosts(prev => prev.map(p => 
-        p.id === selectedPostForComments.id ? { ...p, comments: p.comments + 1 } : p
+        p.id === selectedPostForComments.id ? { ...p, comments: stats.comments, likes: stats.likes } : p
       ));
+      
+      setSelectedPostForComments(prev => prev ? { ...prev, comments: stats.comments, likes: stats.likes } : null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -185,10 +204,11 @@ export const SocialView: React.FC<{
 
   const handleLikePost = async (postId: string) => {
     try {
-      setPosts(prev => prev.map(p => 
-        p.id === postId ? { ...p, likes: p.likes + 1 } : p
-      ));
       await api.likePost(postId);
+      const stats = await api.getPostStats(postId);
+      setPosts(prev => prev.map(p => 
+        p.id === postId ? { ...p, likes: stats.likes, comments: stats.comments } : p
+      ));
     } catch (e) {
       console.error(e);
     }
@@ -200,9 +220,7 @@ export const SocialView: React.FC<{
       if (onRefresh) await onRefresh();
       try {
         const latestPosts = await api.getSocialPosts();
-        if (latestPosts && latestPosts.length > 0) {
-            setPosts([...MOCK_POSTS, ...latestPosts]);
-        }
+        setPosts(latestPosts || []);
         await loadStories();
         if (activeTab === 'inbox') await loadConversations();
       } catch (e) {
@@ -228,22 +246,25 @@ export const SocialView: React.FC<{
     setIsUploading(true);
     try {
       const newPost = await api.createSocialPost(currentUser.id, postContent, selectedFile || undefined);
-      setPosts([newPost, ...posts]);
+      setPosts(prev => [newPost, ...prev]);
       setIsCreatingPost(false);
       setPostContent('');
       setSelectedFile(null);
       setFilePreview(null);
+      setPostFeedback({ type: 'success', message: 'Post published successfully!' });
+      setTimeout(() => setPostFeedback(null), 3000);
     } catch (e) {
       console.error(e);
-      alert("Failed to create post. Please try again.");
+      setPostFeedback({ type: 'error', message: 'Failed to publish post. Please try again.' });
+      setTimeout(() => setPostFeedback(null), 3000);
     } finally {
       setIsUploading(false);
     }
   };
 
   const StoriesTray = () => (
-    <div className="px-4 mb-4 overflow-x-auto no-scrollbar flex items-center gap-3">
-      <div className="flex flex-col items-center gap-1 group cursor-pointer" onClick={() => setIsCreatingStory(true)}>
+    <div className="px-4 mb-4 overflow-x-auto no-scrollbar flex items-center gap-3 min-h-[90px] py-2">
+      <div className="flex flex-col items-center gap-1 group cursor-pointer shrink-0" onClick={() => setIsCreatingStory(true)}>
         <div className="w-14 h-14 rounded-full bg-gray-900 border-2 border-dashed border-gray-700 flex items-center justify-center relative hover:border-neon-purple transition-all">
           <img src={currentUser.avatarUrl} className="w-12 h-12 rounded-full object-cover opacity-50" />
           <div className="absolute inset-0 flex items-center justify-center">
@@ -268,36 +289,56 @@ export const SocialView: React.FC<{
     </div>
   );
 
-  const MoodAnalyzer = () => (
-      <div className="px-4 mb-4">
-          <div className="bg-gray-900/40 border border-white/5 rounded-[24px] p-4 backdrop-blur-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-30 transition-opacity">
-                  <Sparkles size={36} className="text-neon-purple" />
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                      <Radio size={12} className="text-neon-pink animate-pulse" />
-                      <h3 className="text-[8px] font-black text-white uppercase tracking-[0.4em]">Global Vibe</h3>
-                  </div>
-                  <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Live</span>
-              </div>
-              <div className="flex items-end gap-1.5 mb-2">
-                  <h2 className="text-xl font-black text-white italic tracking-tighter uppercase">{activeMood.label}</h2>
-                  <span className="text-[10px] font-bold text-neon-purple mb-0.5">{activeMood.percentage}%</span>
-              </div>
-              <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden flex">
-                  {MOCK_MOODS.map((mood, i) => (
-                      <div key={i} className={`h-full ${mood.color}`} style={{ width: `${mood.percentage}%` }} />
-                  ))}
-              </div>
-          </div>
-      </div>
-  );
-
-  const PostItem: React.FC<{ post: SocialPost }> = ({ post }) => {
+  const PostItem: React.FC<{ post: SocialPost; onPress: () => void }> = ({ post, onPress }) => {
     const [showReactions, setShowReactions] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [stats, setStats] = useState({ likes: post.likes, comments: post.comments });
+
+    useEffect(() => {
+        // Sync with props immediately for optimistic updates
+        setStats({ likes: post.likes, comments: post.comments });
+        
+        // Fetch authoritative source to correct any staleness
+        const fetchStats = async () => {
+            const realStats = await api.getPostStats(post.id);
+            setStats(realStats);
+        };
+        fetchStats();
+    }, [post.id, post.likes, post.comments]);
+
+    const handleShare = async () => {
+        setShowMenu(false);
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Post by @${post.username}`,
+                    text: post.content,
+                    url: `https://dramarr.app/post/${post.id}`
+                });
+            } catch (e) {
+                console.log('Share dismissed');
+            }
+        } else {
+            handleCopyLink();
+        }
+    };
+
+    const handleCopyLink = () => {
+        setShowMenu(false);
+        navigator.clipboard.writeText(`https://dramarr.app/post/${post.id}`);
+        alert('Link copied to clipboard!');
+    };
+
+    const handleReport = () => {
+        setShowMenu(false);
+        alert('Thanks for reporting. We will review this post shortly.');
+    };
+
     return (
-      <div className="bg-gray-900/40 border border-white/5 rounded-[28px] overflow-hidden mb-4 group relative">
+      <div 
+        onClick={onPress}
+        className="bg-gray-900/40 border border-white/5 rounded-[28px] overflow-hidden mb-4 group relative active:bg-gray-800/60 transition-colors cursor-pointer"
+      >
           <div className="p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                   <div className="relative">
@@ -309,13 +350,46 @@ export const SocialView: React.FC<{
                       <p className="text-[7px] text-gray-500 uppercase font-black tracking-widest">{post.timestamp}</p>
                   </div>
               </div>
-              <button className="p-1.5 text-gray-600 hover:text-white transition-colors"><MoreHorizontal size={16}/></button>
+              
+              <div className="relative">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                    className="p-1.5 text-gray-600 hover:text-white transition-colors"
+                  >
+                    <MoreHorizontal size={16}/>
+                  </button>
+                  {showMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                        <div className="absolute right-0 top-full mt-2 bg-gray-900 border border-white/10 rounded-xl shadow-2xl z-50 w-48 overflow-hidden animate-fade-in">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                                className="w-full text-left px-4 py-3.5 text-xs font-bold text-white hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-white/5"
+                            >
+                                <Share2 size={14} className="text-blue-400" /> Share Post
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}
+                                className="w-full text-left px-4 py-3.5 text-xs font-bold text-white hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-white/5"
+                            >
+                                <Link2 size={14} className="text-gray-400" /> Copy Link
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleReport(); }}
+                                className="w-full text-left px-4 py-3.5 text-xs font-bold text-red-500 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
+                            >
+                                <Flag size={14} /> Report
+                            </button>
+                        </div>
+                      </>
+                  )}
+              </div>
           </div>
           <div className="px-4 pb-4">
               {(post.mediaUrl || post.imageUrl) && (
                   <div className="relative rounded-[16px] overflow-hidden mb-3 border border-white/5">
                       {post.mediaType === 'video' ? (
-                        <video src={post.mediaUrl || ''} className="w-full max-h-[400px] object-cover" controls playsInline />
+                        <video src={post.mediaUrl || ''} className="w-full max-h-[400px] object-cover" controls playsInline onClick={e => e.stopPropagation()} />
                       ) : (
                         <img src={post.mediaUrl || post.imageUrl || ''} className="w-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       )}
@@ -329,11 +403,12 @@ export const SocialView: React.FC<{
                   <div 
                     className="absolute bottom-full left-0 mb-2 bg-gray-800/90 backdrop-blur-xl border border-white/10 p-1.5 rounded-full flex gap-2 shadow-2xl animate-fade-in z-50"
                     onMouseLeave={() => setShowReactions(false)}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {REACTION_TYPES.map(rt => (
                       <button 
                         key={rt.label}
-                        onClick={() => { handleLikePost(post.id); setShowReactions(false); }}
+                        onClick={(e) => { e.stopPropagation(); handleLikePost(post.id); setShowReactions(false); }}
                         className={`p-1 hover:scale-125 transition-transform ${rt.color}`}
                       >
                         <rt.icon size={18} fill="currentColor" className="opacity-80" />
@@ -342,25 +417,103 @@ export const SocialView: React.FC<{
                   </div>
                 )}
                 <button 
-                  onClick={() => handleLikePost(post.id)}
-                  onContextMenu={(e) => { e.preventDefault(); setShowReactions(true); }}
+                  onClick={(e) => { e.stopPropagation(); handleLikePost(post.id); }}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setShowReactions(true); }}
                   className="flex items-center gap-1.5 text-gray-400 hover:text-neon-pink transition-colors active:scale-125"
                 >
                   <Heart size={14} />
-                  <span className="text-[9px] font-bold">{post.likes}</span>
+                  <span className="text-[9px] font-bold">{stats.likes}</span>
                 </button>
               </div>
 
               <button 
-                onClick={() => setSelectedPostForComments(post)}
+                onClick={(e) => { e.stopPropagation(); onPress(); }}
                 className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
               >
                 <MessageSquare size={14} />
-                <span className="text-[9px] font-bold">{post.comments}</span>
+                <span className="text-[9px] font-bold">{stats.comments}</span>
               </button>
-              <button className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors ml-auto"><Send size={14} /></button>
+              <button 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors ml-auto"
+              >
+                  <Send size={14} />
+              </button>
           </div>
       </div>
+    );
+  };
+
+  const ConversationItem: React.FC<{ conv: Conversation }> = ({ conv }) => {
+    const [showMenu, setShowMenu] = useState(false);
+
+    const handleAction = (action: string) => {
+        setShowMenu(false);
+        switch(action) {
+            case 'unread': alert('Marked as unread'); break;
+            case 'disappear': alert('Disappearing messages enabled (24h)'); break;
+            case 'mute': alert(`Muted notifications for @${conv.username}`); break;
+            case 'profile': alert(`Navigating to @${conv.username}'s profile...`); break;
+            case 'block': alert(`Blocked @${conv.username}`); break;
+            case 'receipts': alert('Read receipts disabled'); break;
+            case 'report': alert('Conversation reported for review'); break;
+        }
+    };
+
+    return (
+        <div className="relative group mb-2">
+            <div 
+                onClick={() => { setSelectedConversation(conv); onChatStateChange?.(true); }}
+                className="w-full bg-gray-900/40 hover:bg-gray-800 transition-colors p-4 rounded-3xl border border-white/5 flex items-center gap-4 cursor-pointer active:scale-[0.98]"
+            >
+                <div className="relative shrink-0">
+                    <img src={conv.avatarUrl} className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
+                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black" />
+                </div>
+                <div className="flex-1 min-w-0 text-left pr-8">
+                    <div className="flex justify-between items-baseline mb-1">
+                        <h4 className="font-black text-white text-sm truncate uppercase tracking-tighter italic">@{conv.username}</h4>
+                        <span className="text-[8px] text-gray-500 font-black uppercase tracking-widest">{new Date(conv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-white font-bold' : 'text-gray-500 font-medium'}`}>{conv.lastMessage}</p>
+                </div>
+                {conv.unreadCount > 0 && (
+                    <div className="bg-neon-pink w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-neon-pink/30 shrink-0">{conv.unreadCount}</div>
+                )}
+            </div>
+
+            <button 
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-white rounded-full hover:bg-white/10 transition-all z-10"
+            >
+                <MoreHorizontal size={18} />
+            </button>
+
+            {showMenu && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                    <div className="absolute right-4 top-10 z-50 bg-gray-900 border border-white/10 rounded-xl shadow-2xl w-56 overflow-hidden animate-fade-in py-1">
+                        {[
+                            { id: 'unread', icon: Mail, label: 'Mark as unread' },
+                            { id: 'disappear', icon: Timer, label: 'Disappearing messages' },
+                            { id: 'mute', icon: BellOff, label: 'Mute notifications' },
+                            { id: 'profile', icon: UserIcon, label: 'See profile' },
+                            { id: 'block', icon: Ban, label: 'Block user', color: 'text-red-500' },
+                            { id: 'receipts', icon: CheckCheck, label: 'Read receipts' },
+                            { id: 'report', icon: Flag, label: 'Report conversation', color: 'text-red-500' },
+                        ].map(item => (
+                            <button
+                                key={item.id}
+                                onClick={(e) => { e.stopPropagation(); handleAction(item.id); }}
+                                className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 flex items-center gap-3 transition-colors ${item.color || 'text-white'}`}
+                            >
+                                <item.icon size={14} /> {item.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
     );
   };
 
@@ -381,28 +534,7 @@ export const SocialView: React.FC<{
         {isLoadingConversations ? (
           <div className="flex justify-center py-20"><RotateCcw size={24} className="text-neon-purple animate-spin" /></div>
         ) : conversations.length > 0 ? (
-          conversations.map(conv => (
-            <button 
-              key={conv.partnerId} 
-              onClick={() => { setSelectedConversation(conv); onChatStateChange?.(true); }}
-              className="w-full bg-gray-900/40 hover:bg-gray-800 transition-colors p-4 rounded-3xl border border-white/5 flex items-center gap-4 group active:scale-[0.98]"
-            >
-              <div className="relative shrink-0">
-                <img src={conv.avatarUrl} className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
-                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black" />
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <div className="flex justify-between items-baseline mb-1">
-                  <h4 className="font-black text-white text-sm truncate uppercase tracking-tighter italic">@{conv.username}</h4>
-                  <span className="text-[8px] text-gray-500 font-black uppercase tracking-widest">{new Date(conv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-white font-bold' : 'text-gray-500 font-medium'}`}>{conv.lastMessage}</p>
-              </div>
-              {conv.unreadCount > 0 && (
-                <div className="bg-neon-pink w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-neon-pink/30">{conv.unreadCount}</div>
-              )}
-            </button>
-          ))
+          conversations.map(conv => <ConversationItem key={conv.partnerId} conv={conv} />)
         ) : (
           <div className="py-20 flex flex-col items-center opacity-30 text-center">
             <MessageSquare size={48} className="mb-4 text-gray-600" />
@@ -414,12 +546,28 @@ export const SocialView: React.FC<{
     </div>
   );
 
-  const ChatUI = () => (
+  const ChatUI = () => {
+    const [showChatMenu, setShowChatMenu] = useState(false);
+
+    const handleChatAction = (action: string) => {
+        setShowChatMenu(false);
+        switch(action) {
+            case 'unread': alert('Conversation marked as unread'); setSelectedConversation(null); onChatStateChange?.(false); break;
+            case 'disappear': alert('Disappearing messages set to 24 hours'); break;
+            case 'mute': alert('Notifications muted for this conversation'); break;
+            case 'profile': alert(`Viewing profile of @${selectedConversation?.username}`); break;
+            case 'block': alert(`Blocked @${selectedConversation?.username}`); setSelectedConversation(null); onChatStateChange?.(false); break;
+            case 'receipts': alert('Read receipts turned off'); break;
+            case 'report': alert('Conversation reported'); break;
+        }
+    };
+
+    return (
     <div className="fixed inset-0 z-[120] bg-black flex flex-col animate-fade-in">
       <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-neon-purple/10 to-transparent pointer-events-none" />
       
       {/* Header */}
-      <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-xl z-10 pt-12">
+      <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-xl z-10 pt-12 relative">
         <div className="flex items-center gap-3">
           <button onClick={() => { setSelectedConversation(null); onChatStateChange?.(false); onClearTarget?.(); }} className="text-gray-400 hover:text-white p-2">
             <ChevronLeft size={24} />
@@ -432,7 +580,39 @@ export const SocialView: React.FC<{
             </div>
           </div>
         </div>
-        <button className="p-2 text-gray-500"><MoreHorizontal size={20} /></button>
+        
+        <div className="relative">
+            <button 
+                onClick={() => setShowChatMenu(!showChatMenu)}
+                className="p-2 text-gray-500 hover:text-white transition-colors"
+            >
+                <MoreHorizontal size={20} />
+            </button>
+            {showChatMenu && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-50 bg-gray-900 border border-white/10 rounded-xl shadow-2xl w-56 overflow-hidden animate-fade-in py-1">
+                        {[
+                            { id: 'unread', icon: Mail, label: 'Mark as unread' },
+                            { id: 'disappear', icon: Timer, label: 'Disappearing messages' },
+                            { id: 'mute', icon: BellOff, label: 'Mute notifications' },
+                            { id: 'profile', icon: UserIcon, label: 'See profile' },
+                            { id: 'block', icon: Ban, label: 'Block user', color: 'text-red-500' },
+                            { id: 'receipts', icon: CheckCheck, label: 'Read receipts' },
+                            { id: 'report', icon: Flag, label: 'Report conversation', color: 'text-red-500' },
+                        ].map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => handleChatAction(item.id)}
+                                className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 flex items-center gap-3 transition-colors ${item.color || 'text-white'}`}
+                            >
+                                <item.icon size={14} /> {item.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -475,17 +655,72 @@ export const SocialView: React.FC<{
         </div>
       </div>
     </div>
-  );
+    );
+  };
+
+  const CommentItem: React.FC<{ comment: Comment }> = ({ comment }) => {
+    return (
+      <div className="animate-fade-in">
+         <div className="flex gap-3">
+            <img src={comment.avatarUrl} className="w-7 h-7 rounded-full border border-white/10 shrink-0" />
+            <div className="flex-1">
+              <div className="bg-gray-900/50 rounded-2xl p-3 border border-white/5">
+                <span className="font-bold text-white text-[10px]">@{comment.username}</span>
+                <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{comment.text}</p>
+              </div>
+              <div className="flex items-center gap-4 mt-1 ml-2">
+                 <button className="text-[9px] font-bold text-gray-500 hover:text-white">Like</button>
+                 <button 
+                    onClick={() => {
+                        setReplyTo(comment);
+                        commentInputRef.current?.focus();
+                    }} 
+                    className="text-[9px] font-bold text-gray-500 hover:text-white"
+                 >
+                    Reply
+                 </button>
+                 <span className="text-[9px] text-gray-600">{new Date(comment.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+              
+              {comment.replies && comment.replies.length > 0 && (
+                <div className="mt-2 pl-2 space-y-2 border-l-2 border-white/5">
+                    {comment.replies.map(reply => (
+                        <div key={reply.id} className="flex gap-2">
+                            <img src={reply.avatarUrl} className="w-5 h-5 rounded-full border border-white/10 shrink-0" />
+                            <div className="flex-1">
+                                <div className="bg-gray-900/30 rounded-xl p-2 border border-white/5">
+                                    <span className="font-bold text-white text-[9px]">@{reply.username}</span>
+                                    <p className="text-[10px] text-gray-400">{reply.text}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+              )}
+            </div>
+         </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-black md:pt-6 max-w-7xl mx-auto w-full relative min-h-0 overflow-hidden">
       
+      {/* Feedback Notification */}
+      {postFeedback && (
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[160] px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl animate-fade-in ${postFeedback.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            {postFeedback.type === 'success' ? <CheckCheck size={18} /> : <AlertCircle size={18} />}
+            <span className="text-[10px] font-black uppercase tracking-widest">{postFeedback.message}</span>
+        </div>
+      )}
+
       {selectedStoryIndex !== null && (
         <StoryPlayer 
           stories={stories} 
           initialStoryIndex={selectedStoryIndex} 
           onClose={() => setSelectedStoryIndex(null)} 
           currentUser={currentUser}
+          onDeleteStory={handleStoryDelete}
         />
       )}
       
@@ -512,9 +747,18 @@ export const SocialView: React.FC<{
           <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar pb-32">
               <div className="flex gap-3 mb-6 pb-6 border-b border-white/5">
                 <img src={selectedPostForComments.avatarUrl} className="w-10 h-10 rounded-full border border-white/10" />
-                <div>
+                <div className="flex-1">
                    <h3 className="font-bold text-white text-sm">@{selectedPostForComments.username}</h3>
                    <p className="text-xs text-gray-400 mt-1">{selectedPostForComments.content}</p>
+                   {selectedPostForComments.mediaUrl && (
+                       <div className="mt-3 rounded-xl overflow-hidden max-h-48 w-full border border-white/5">
+                           {selectedPostForComments.mediaType === 'video' ? (
+                               <video src={selectedPostForComments.mediaUrl} className="w-full h-full object-cover" controls />
+                           ) : (
+                               <img src={selectedPostForComments.mediaUrl || selectedPostForComments.imageUrl || ''} className="w-full h-full object-cover" />
+                           )}
+                       </div>
+                   )}
                 </div>
               </div>
 
@@ -522,17 +766,7 @@ export const SocialView: React.FC<{
                 {isLoadingComments ? (
                   <div className="flex justify-center py-20"><RotateCcw size={24} className="text-neon-purple animate-spin" /></div>
                 ) : (
-                   comments.length > 0 ? comments.map(c => (
-                     <div key={c.id} className="flex gap-3 animate-fade-in">
-                        <img src={c.avatarUrl} className="w-7 h-7 rounded-full border border-white/10 shrink-0" />
-                        <div className="flex-1">
-                          <div className="bg-gray-900/50 rounded-2xl p-3 border border-white/5">
-                            <span className="font-bold text-white text-[10px]">@{c.username}</span>
-                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{c.text}</p>
-                          </div>
-                        </div>
-                     </div>
-                   )) : (
+                   comments.length > 0 ? comments.map(c => <CommentItem key={c.id} comment={c} />) : (
                      <div className="text-center py-20 text-gray-600 font-bold uppercase text-[9px] tracking-widest">Share your thoughts</div>
                    )
                 )}
@@ -540,13 +774,22 @@ export const SocialView: React.FC<{
           </div>
 
           <div className="p-4 bg-black border-t border-white/10 pb-10">
+              {replyTo && (
+                  <div className="flex justify-between items-center px-4 py-2 bg-gray-900/50 mb-2 rounded-xl border border-white/5 animate-slide-up">
+                      <p className="text-[10px] text-gray-400 font-bold flex items-center gap-2">
+                          <CornerDownRight size={12} className="text-neon-pink"/> 
+                          Replying to <span className="text-white">@{replyTo.username}</span>
+                      </p>
+                      <button onClick={() => setReplyTo(null)}><X size={14} className="text-gray-500"/></button>
+                  </div>
+              )}
               <div className="flex gap-2 bg-gray-900 rounded-[20px] p-1.5 border border-white/10">
                 <input 
                   ref={commentInputRef}
                   type="text" 
                   value={newComment}
                   onChange={e => setNewComment(e.target.value)}
-                  placeholder="Share your thoughts..."
+                  placeholder={replyTo ? `Reply to @${replyTo.username}...` : "Share your thoughts..."}
                   className="flex-1 bg-transparent px-3 text-[11px] text-white focus:outline-none"
                 />
                 <button 
@@ -604,7 +847,6 @@ export const SocialView: React.FC<{
               {activeTab === 'feed' ? (
                 <>
                   <StoriesTray />
-                  <MoodAnalyzer />
 
                   <div className="px-4 pb-24">
                       <div className="flex items-center justify-between mb-4 px-1">
@@ -613,11 +855,17 @@ export const SocialView: React.FC<{
                       </div>
 
                       <div className="space-y-4">
-                          {posts.length > 0 ? posts.map(post => <PostItem key={post.id} post={post} />) : (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                              <RotateCcw size={32} className="animate-spin-slow mb-4" />
-                              <span className="text-[10px] font-black uppercase tracking-widest">Loading</span>
-                            </div>
+                          {isLoadingPosts ? (
+                             <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                               <RotateCcw size={32} className="animate-spin-slow mb-4" />
+                               <span className="text-[10px] font-black uppercase tracking-widest">Loading</span>
+                             </div>
+                          ) : posts.length > 0 ? (
+                             posts.map(post => <PostItem key={post.id} post={post} onPress={() => setSelectedPostForComments(post)} />)
+                          ) : (
+                             <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                               <span className="text-[10px] font-black uppercase tracking-widest">No posts yet</span>
+                             </div>
                           )}
                       </div>
                   </div>

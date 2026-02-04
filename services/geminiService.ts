@@ -3,8 +3,9 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 
 // Standard Gemini initialization following guidelines
 export const generateVideoMetadata = async (title: string, userNotes: string): Promise<{ description: string; tags: string[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
+    if (!process.env.API_KEY) throw new Error("API Key missing");
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Generate a catchy, viral-style social media description (max 150 chars) and 3-5 relevant hashtags for a short drama video.
@@ -25,14 +26,15 @@ export const generateVideoMetadata = async (title: string, userNotes: string): P
     if (response.text) return JSON.parse(response.text);
     throw new Error("No response from AI");
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error (Video Metadata):", error);
     return { description: "Check out this amazing drama! ✨", tags: ["drama", "viral", "new"] };
   }
 };
 
 export const generateVoiceover = async (text: string, voiceName: 'Zephyr' | 'Puck' | 'Kore' | 'Charon'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
+    if (!process.env.API_KEY) throw new Error("API Key missing");
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: `Say with dramatic intensity: ${text}` }] }],
@@ -56,8 +58,9 @@ export const generateVoiceover = async (text: string, voiceName: 'Zephyr' | 'Puc
 };
 
 export const generateScriptPrompt = async (concept: string): Promise<{ script: string, scenes: string[] }> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
+        if (!process.env.API_KEY) throw new Error("API Key missing");
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents: `Write a cinematic script outline for a short vertical drama (Tiktok/Reels style) based on this concept: "${concept}". 
@@ -75,14 +78,15 @@ export const generateScriptPrompt = async (concept: string): Promise<{ script: s
         });
         return JSON.parse(response.text || "{}");
     } catch (e) {
-        console.error(e);
+        console.error("Gemini API Error (Script):", e);
         return { script: "Failed to generate script.", scenes: [] };
     }
 };
 
 export const moderateContent = async (text: string): Promise<boolean> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
+        if (!process.env.API_KEY) throw new Error("API Key missing");
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: `Is this text appropriate for a general audience social media platform? Return JSON. Text: "${text}"`,
@@ -97,6 +101,7 @@ export const moderateContent = async (text: string): Promise<boolean> => {
         const result = JSON.parse(response.text || "{}");
         return result.isSafe ?? true;
     } catch (e) {
+        console.error("Gemini API Error (Moderation):", e);
         return true;
     }
 }

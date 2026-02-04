@@ -1,40 +1,64 @@
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Sparkles, X, Check, Film, FolderPlus, Lock, BarChart3, Eye, Heart, TrendingUp, ChevronLeft, BookOpen, Send, Quote, Mic2, Play, Calendar, Zap, DollarSign, MousePointer2, Award, ChevronRight, ShieldAlert, AlertCircle, Info, CreditCard, Landmark, CheckCircle2 } from 'lucide-react';
-import { generateVideoMetadata, generateScriptPrompt, generateVoiceover } from '../services/geminiService';
+import { Upload, Sparkles, X, Check, Film, FolderPlus, Lock, BarChart3, Eye, Heart, TrendingUp, ChevronLeft, BookOpen, Send, Quote, Mic2, Play, Calendar, Zap, DollarSign, MousePointer2, Award, ChevronRight, ShieldAlert, AlertCircle, Info, CreditCard, Landmark, CheckCircle2, Search, Image as ImageIcon, Plus, Video as VideoIcon } from 'lucide-react';
 import { api } from '../services/api';
-import { CATEGORIES, User, Video, CREATOR_TIERS } from '../types';
+import { CATEGORIES, User, Video, CREATOR_TIERS, Series } from '../types';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface CreatorStudioProps {
   onClose: () => void;
   user: User;
   videos: Video[];
-  initialMode?: 'episode' | 'series' | 'monetization' | 'ai-writer' | 'voice-studio';
+  initialMode?: 'video' | 'series' | 'monetization';
   onBack: () => void;
+  onVideoUploaded?: () => void;
 }
 
-export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'episode', onBack }) => {
-  const [mode, setMode] = useState<'episode' | 'series' | 'monetization' | 'ai-writer' | 'voice-studio'>(initialMode);
+const VIDEO_GENRES = [
+  "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama", "Family", "Fantasy", 
+  "History", "Horror", "Music", "Mystery", "Romance", "Sci-Fi", "Sport", "Thriller", "War", "Western",
+  "Biography", "Musical", "Noir", "Short", "Reality-TV", "News", "Talk-Show", "Game-Show", "Vlog",
+  "Tech", "Cooking", "Travel", "Fitness", "Education", "Gaming", "DIY", "ASMR", "Lifestyle", "Fashion"
+];
+
+export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'video', onBack, onVideoUploaded }) => {
+  const [mode, setMode] = useState<'video' | 'series' | 'monetization'>(initialMode);
+  const [seriesMode, setSeriesMode] = useState<'create' | 'add_episode'>('create');
+  
+  // Upload State
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   
   // Payout Modal State
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [payoutMethod, setPayoutMethod] = useState<'PayPal' | 'Bank' | 'Google Pay'>('PayPal');
+  const [targetPaypal, setTargetPaypal] = useState(user.paypalEmail || '');
   const [isPayoutProcessing, setIsPayoutProcessing] = useState(false);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
 
-  // Voice Studio State
-  const [ttsText, setTtsText] = useState('');
-  const [selectedVoice, setSelectedVoice] = useState<'Zephyr' | 'Puck' | 'Kore' | 'Charon'>('Zephyr');
-  const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
-
-  // Episode State
-  const [selectedSeries, setSelectedSeries] = useState('');
+  // Episode/Video State
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [isPremiere, setIsPremiere] = useState(false);
+  
+  // Series Creation State
+  const [seriesTitle, setSeriesTitle] = useState('');
+  const [seriesDescription, setSeriesDescription] = useState('');
+  const [seriesCover, setSeriesCover] = useState<File | null>(null);
+  const [seriesCategory, setSeriesCategory] = useState('');
+  
+  // Add Episode State
+  const [userSeries, setUserSeries] = useState<Series[]>([]);
+  const [selectedSeriesId, setSelectedSeriesId] = useState('');
+  const [seriesEpisodeNumber, setSeriesEpisodeNumber] = useState(1);
+  
+  // Genre State
+  const [genreSearch, setGenreSearch] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('');
+  
+  // Publishing State
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishFeedback, setPublishFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   // Monetization Dashboard State
   const currentTier = CREATOR_TIERS[user.creatorTier || 'Starter'];
@@ -48,39 +72,173 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
   const bonus = user.monthlyWatchTime && user.monthlyWatchTime > 100000 ? creatorEarnings * 0.05 : 0;
   const totalThisMonth = creatorEarnings + bonus;
 
-  const chartData = [
-    { day: 'Mon', revenue: totalThisMonth * 0.1 },
-    { day: 'Tue', revenue: totalThisMonth * 0.15 },
-    { day: 'Wed', revenue: totalThisMonth * 0.08 },
-    { day: 'Thu', revenue: totalThisMonth * 0.22 },
-    { day: 'Fri', revenue: totalThisMonth * 0.18 },
-    { day: 'Sat', revenue: totalThisMonth * 0.25 },
-    { day: 'Sun', revenue: totalThisMonth * 0.12 },
-  ];
+  // Real data for chart: Top earning/viewed videos
+  const performanceData = videos
+    .filter(v => v.creatorId === user.id)
+    .sort((a, b) => (b.views || 0) - (a.views || 0))
+    .slice(0, 7)
+    .map(v => ({
+      title: v.description.length > 12 ? v.description.substring(0, 10) + '...' : v.description,
+      views: v.views
+    }));
 
-  const handleGenerateVoice = async () => {
-      if (!ttsText) return;
-      setLoading(true);
-      try {
-          const base64 = await generateVoiceover(ttsText, selectedVoice);
-          setGeneratedAudio(base64);
-      } catch (e) {
-          alert("Voice generation failed. Please check your API key.");
+  useEffect(() => {
+      if (mode === 'series' && seriesMode === 'add_episode') {
+          const fetchSeries = async () => {
+              const data = await api.getUserSeries(user.id);
+              setUserSeries(data);
+          };
+          fetchSeries();
       }
-      setLoading(false);
+  }, [mode, seriesMode, user.id]);
+
+  useEffect(() => {
+      if (selectedSeriesId && userSeries.length > 0) {
+          const s = userSeries.find(ser => ser.id === selectedSeriesId);
+          if (s) {
+              setSeriesEpisodeNumber(s.totalEpisodes + 1);
+          }
+      }
+  }, [selectedSeriesId, userSeries]);
+
+  const handlePublishVideo = async () => {
+      if (!file || !episodeTitle.trim() || !selectedGenre) {
+          setPublishFeedback({ type: 'error', message: 'Please select a video, enter title, and choose a genre.' });
+          setTimeout(() => setPublishFeedback(null), 3000);
+          return;
+      }
+
+      setIsPublishing(true);
+      try {
+          await api.uploadVideo(file, thumbnailFile, user.id, episodeTitle, isLocked, selectedGenre);
+          setPublishFeedback({ type: 'success', message: 'Published successfully! Your video is now live.' });
+          
+          // Clear form
+          setFile(null);
+          setThumbnailFile(null);
+          setEpisodeTitle('');
+          setIsLocked(false);
+          setIsPremiere(false);
+          setSelectedGenre('');
+          setGenreSearch('');
+
+          // Notify parent app to refresh feed immediately
+          if (onVideoUploaded) {
+              setTimeout(() => {
+                  onVideoUploaded();
+                  onClose();
+              }, 1500);
+          }
+      } catch (e) {
+          console.error("Publish error", e);
+          setPublishFeedback({ type: 'error', message: 'Upload failed. Ensure you have network connection.' });
+      } finally {
+          setIsPublishing(false);
+      }
   };
 
-  const handleRequestPayout = () => {
+  const handleAddEpisode = async () => {
+      if (!selectedSeriesId || !file || !episodeTitle.trim()) {
+          setPublishFeedback({ type: 'error', message: 'Please select series, file, and title.' });
+          setTimeout(() => setPublishFeedback(null), 3000);
+          return;
+      }
+
+      const series = userSeries.find(s => s.id === selectedSeriesId);
+      if (!series) return;
+
+      setIsPublishing(true);
+      try {
+          await api.uploadVideo(
+              file, 
+              thumbnailFile, 
+              user.id, 
+              episodeTitle, 
+              isLocked, 
+              series.category,
+              { id: series.id, title: series.title, episodeNumber: seriesEpisodeNumber }
+          );
+          setPublishFeedback({ type: 'success', message: 'Episode added successfully!' });
+          
+          // Clear form
+          setFile(null);
+          setThumbnailFile(null);
+          setEpisodeTitle('');
+          setIsLocked(false);
+          setSelectedSeriesId('');
+          
+          if (onVideoUploaded) {
+              setTimeout(() => {
+                  onVideoUploaded();
+              }, 1500);
+          }
+      } catch (e) {
+          console.error("Add Episode error", e);
+          setPublishFeedback({ type: 'error', message: 'Failed to add episode.' });
+      } finally {
+          setIsPublishing(false);
+      }
+  };
+
+  const handleCreateSeries = async () => {
+      if (!seriesTitle.trim() || !seriesDescription.trim() || !seriesCategory) {
+          setPublishFeedback({ type: 'error', message: 'Please fill all required fields.' });
+          setTimeout(() => setPublishFeedback(null), 3000);
+          return;
+      }
+
+      setIsPublishing(true);
+      try {
+          await api.createSeries(seriesCover, user.id, seriesTitle, seriesDescription, seriesCategory);
+          setPublishFeedback({ type: 'success', message: 'Series created successfully!' });
+          
+          // Clear form
+          setSeriesTitle('');
+          setSeriesDescription('');
+          setSeriesCover(null);
+          setSeriesCategory('');
+          setGenreSearch('');
+
+          if (onVideoUploaded) {
+              setTimeout(() => {
+                  onVideoUploaded();
+              }, 1500);
+          }
+      } catch (e) {
+          console.error("Create Series error", e);
+          setPublishFeedback({ type: 'error', message: 'Failed to create series.' });
+      } finally {
+          setIsPublishing(false);
+      }
+  };
+
+  const handleRequestPayout = async () => {
+    if (payoutMethod === 'PayPal' && !targetPaypal.includes('@')) {
+        alert("Please enter a valid PayPal email address.");
+        return;
+    }
+    if (!user.pendingPayoutBalance || user.pendingPayoutBalance <= 0) {
+        alert("No funds available for withdrawal.");
+        return;
+    }
+
     setIsPayoutProcessing(true);
-    setTimeout(() => {
-        setIsPayoutProcessing(false);
+    try {
+        await api.requestPayout(user.id, user.pendingPayoutBalance, payoutMethod);
         setPayoutSuccess(true);
         setTimeout(() => {
             setPayoutSuccess(false);
             setShowPayoutModal(false);
-        }, 2000);
-    }, 1500);
+        }, 2500);
+    } catch (e) {
+        console.error("Payout failed", e);
+        alert("Failed to process payout request. Please try again.");
+    } finally {
+        setIsPayoutProcessing(false);
+    }
   };
+
+  const filteredGenres = VIDEO_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase()));
 
   const renderMonetization = () => (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -101,30 +259,43 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                                 <CheckCircle2 size={64} className="text-green-500" />
                             </div>
                             <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter">Request Received</h4>
-                            <p className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-2">Payout usually takes 1-3 business days</p>
+                            <p className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-2">Funds will be sent to {payoutMethod === 'PayPal' ? targetPaypal : 'your account'} in 1-3 days.</p>
                         </div>
                     ) : (
                         <div className="space-y-8">
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-2">Choose Payout Method</p>
                                 <div className="space-y-3">
-                                    <button 
-                                        onClick={() => setPayoutMethod('PayPal')}
-                                        className={`w-full flex items-center justify-between p-4 rounded-3xl border transition-all ${payoutMethod === 'PayPal' ? 'bg-white/5 border-white/20 shadow-lg' : 'bg-slate-900/50 border-transparent'}`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-slate-900 rounded-2xl text-blue-400">
-                                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                                                    <path d="M20.067 8.178c-.552 2.766-2.26 4.332-5.119 4.332H13.1c-.552 0-.916.353-1.018.9l-.916 5.8c-.05.3.1.55.4.55h3.067c.5 0 .866-.35.966-.85l.05-.25.5-3.15.05-.3c.1-.5.467-.85.967-.85h.616c2.7 0 4.817-1.1 5.417-4.233.25-1.2.1-2.2-.55-2.917-.45-.483-1.233-.766-2.25-.766h-.516c-.05 0-.15.016-.216.033z" />
-                                                </svg>
+                                    <div className={`rounded-3xl border transition-all overflow-hidden ${payoutMethod === 'PayPal' ? 'bg-white/5 border-white/20 shadow-lg' : 'bg-slate-900/50 border-transparent'}`}>
+                                        <button 
+                                            onClick={() => setPayoutMethod('PayPal')}
+                                            className="w-full flex items-center justify-between p-4"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-slate-900 rounded-2xl text-blue-400">
+                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                                        <path d="M20.067 8.178c-.552 2.766-2.26 4.332-5.119 4.332H13.1c-.552 0-.916.353-1.018.9l-.916 5.8c-.05.3.1.55.4.55h3.067c.5 0 .866-.35.966-.85l.05-.25.5-3.15.05-.3c.1-.5.467-.85.967-.85h.616c2.7 0 4.817-1.1 5.417-4.233.25-1.2.1-2.2-.55-2.917-.45-.483-1.233-.766-2.25-.766h-.516c-.05 0-.15.016-.216.033z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-bold text-white">PayPal</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Global Transfer</p>
+                                                </div>
                                             </div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-bold text-white">PayPal</p>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{user.paypalEmail || 'alex_creator@gmail.com'}</p>
+                                            {payoutMethod === 'PayPal' && <CheckCircle2 size={18} className="text-blue-400" />}
+                                        </button>
+                                        {payoutMethod === 'PayPal' && (
+                                            <div className="px-4 pb-4 animate-fade-in">
+                                                <input 
+                                                    type="email" 
+                                                    value={targetPaypal} 
+                                                    onChange={(e) => setTargetPaypal(e.target.value)}
+                                                    placeholder="Enter PayPal Email"
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-bold placeholder-gray-600"
+                                                />
                                             </div>
-                                        </div>
-                                        {payoutMethod === 'PayPal' && <CheckCircle2 size={18} className="text-blue-400" />}
-                                    </button>
+                                        )}
+                                    </div>
 
                                     <button 
                                         onClick={() => setPayoutMethod('Google Pay')}
@@ -235,7 +406,7 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                             <span className="text-white">{user.monthlyWatchTime} / {nextTier.minWatchTime}</span>
                         </div>
                         <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden">
-                            <div className="h-full bg-neon-pink transition-all duration-1000" style={{ width: `${Math.min(100, (user.monthlyWatchTime || 0 / nextTier.minWatchTime) * 100)}%` }} />
+                            <div className="h-full bg-neon-pink transition-all duration-1000" style={{ width: `${Math.min(100, ((user.monthlyWatchTime || 0) / nextTier.minWatchTime) * 100)}%` }} />
                         </div>
                     </div>
                 </div>
@@ -245,27 +416,33 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
         {/* Revenue Analytics Chart */}
         <div className="bg-gray-900/50 rounded-[32px] p-6 border border-white/5">
             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
-                <TrendingUp size={14} className="text-neon-purple" /> Daily Ad Revenue
+                <TrendingUp size={14} className="text-neon-purple" /> Top Performing Content
             </h4>
-            <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#4B5563', fontSize: 10}} dy={10} />
-                        <Tooltip 
-                            contentStyle={{backgroundColor: '#111827', border: '1px solid #1F2937', borderRadius: '16px', fontSize: '10px'}}
-                            cursor={{fill: '#ffffff05'}}
-                        />
-                        <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
-                            {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={index === 5 ? '#7C3AED' : '#374151'} />
-                            ))}
+            <div className="h-48 w-full min-w-0">
+                {performanceData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={performanceData}>
+                            <XAxis dataKey="title" axisLine={false} tickLine={false} tick={{fill: '#4B5563', fontSize: 9}} dy={10} interval={0} />
+                            <Tooltip 
+                                contentStyle={{backgroundColor: '#111', border: '1px solid #1F2937', borderRadius: '16px', fontSize: '10px'}}
+                                cursor={{fill: '#ffffff05'}}
+                            />
+                            <Bar dataKey="views" radius={[6, 6, 0, 0]}>
+                                {performanceData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#7C3AED' : '#374151'} />
+                                ))}
+                            </Bar>
                         </BarChart>
                     </ResponsiveContainer>
-                </div>
+                ) : (
+                    <div className="h-full flex items-center justify-center text-gray-600 font-bold uppercase text-[9px]">
+                        No performance data available
+                    </div>
+                )}
             </div>
 
             {/* Bonuses & Transparency */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="bg-gray-900/50 p-6 rounded-3xl border border-white/5">
                     <div className="flex items-center gap-2 mb-2">
                         <Sparkles size={14} className="text-yellow-500" />
@@ -291,10 +468,20 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                 </div>
             </div>
         </div>
-    );
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-full bg-black text-white pb-20 pt-12 animate-fade-in">
+    <div className="flex flex-col h-full bg-black text-white pb-20 pt-12 animate-fade-in relative">
+      
+      {/* Upload Feedback */}
+      {publishFeedback && (
+        <div className={`fixed top-12 left-1/2 -translate-x-1/2 z-[160] px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl animate-fade-in ${publishFeedback.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            {publishFeedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span className="text-[10px] font-black uppercase tracking-widest">{publishFeedback.message}</span>
+        </div>
+      )}
+
       <div className="flex justify-between items-center px-4 mb-6">
         <div className="flex items-center gap-3">
             <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
@@ -307,75 +494,53 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
 
       <div className="px-4 mb-6">
         <div className="bg-gray-900 p-1 rounded-xl flex overflow-x-auto no-scrollbar gap-1">
-            {['episode', 'series', 'ai-writer', 'voice-studio', 'monetization'].map((m) => (
+            {['video', 'series', 'monetization'].map((m) => (
                 <button 
                     key={m}
                     onClick={() => setMode(m as any)} 
                     className={`flex-1 py-2 px-4 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${mode === m ? 'bg-white text-black shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                 >
-                    {m.replace('-', ' ')}
+                    {m}
                 </button>
             ))}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 no-scrollbar">
-        {mode === 'monetization' ? renderMonetization() : mode === 'voice-studio' ? (
-            <div className="space-y-6 animate-fade-in">
-                <div className="bg-gradient-to-br from-indigo-900/40 to-black p-8 rounded-[40px] border border-indigo-500/30">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-indigo-500 rounded-2xl shadow-lg shadow-indigo-500/20"><Mic2 size={24} /></div>
-                        <div>
-                            <h3 className="text-xl font-black uppercase italic">AI Voice Studio</h3>
-                            <p className="text-[10px] text-indigo-400 font-bold tracking-[0.2em] uppercase">Cinematic Narration</p>
-                        </div>
-                    </div>
-
-                    <textarea 
-                        value={ttsText}
-                        onChange={e => setTtsText(e.target.value)}
-                        className="w-full bg-black/40 border border-indigo-500/20 rounded-3xl p-6 text-sm text-white focus:border-indigo-500 outline-none resize-none mb-6 min-h-[120px]"
-                        placeholder="Type the dialogue for your character..."
-                    />
-
-                    <div className="grid grid-cols-2 gap-3 mb-8">
-                        {['Zephyr', 'Puck', 'Kore', 'Charon'].map((v) => (
-                            <button 
-                                key={v}
-                                onClick={() => setSelectedVoice(v as any)}
-                                className={`py-3 rounded-2xl border text-xs font-bold transition-all ${selectedVoice === v ? 'bg-indigo-500 border-indigo-400 text-white shadow-lg' : 'bg-black/20 border-white/5 text-gray-500'}`}
-                            >
-                                {v}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={handleGenerateVoice}
-                            disabled={loading || !ttsText}
-                            className="flex-1 bg-white text-black py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 hover:bg-gray-200 transition-all disabled:opacity-50"
-                        >
-                            {loading ? "Generating..." : "Generate Audio"}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        ) : mode === 'episode' ? (
+        {mode === 'monetization' ? renderMonetization() : mode === 'video' ? (
             <div className="space-y-6">
-                 <div className="border-2 border-dashed border-gray-800 rounded-[32px] h-48 flex flex-col items-center justify-center bg-gray-900/30 mb-6 hover:border-neon-purple transition-colors relative">
-                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setFile(e.target.files?.[0] || null)} />
+                 {/* Video Input */}
+                 <div className="border-2 border-dashed border-gray-800 rounded-[32px] h-48 flex flex-col items-center justify-center bg-gray-900/30 mb-2 hover:border-neon-purple transition-colors relative group">
+                    <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setFile(e.target.files?.[0] || null)} />
                     {file ? (
                         <div className="text-center">
                             <Check className="w-10 h-10 text-green-500 mx-auto mb-2" />
                             <p className="text-sm font-bold">{file.name}</p>
                         </div>
                     ) : (
-                        <div className="text-center">
-                            <Upload className="w-10 h-10 text-gray-700 mx-auto mb-2" />
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Upload Episode</p>
+                        <div className="text-center group-hover:scale-105 transition-transform">
+                            <Upload className="w-10 h-10 text-gray-700 mx-auto mb-2 group-hover:text-neon-purple transition-colors" />
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Upload Video</p>
                         </div>
                     )}
+                 </div>
+
+                 {/* Thumbnail Input */}
+                 <div className="flex items-center gap-4 mb-4">
+                    <div className="w-full h-14 border border-gray-800 rounded-2xl bg-gray-900/30 flex items-center px-4 relative overflow-hidden">
+                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setThumbnailFile(e.target.files?.[0] || null)} />
+                        {thumbnailFile ? (
+                            <div className="flex items-center gap-2 text-green-500">
+                                <Check size={16} />
+                                <span className="text-xs font-bold truncate max-w-[200px]">{thumbnailFile.name}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-gray-500">
+                                <ImageIcon size={16} />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Custom Thumbnail (Optional)</span>
+                            </div>
+                        )}
+                    </div>
                  </div>
 
                  <div className="space-y-4">
@@ -383,9 +548,37 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                         type="text" 
                         value={episodeTitle}
                         onChange={e => setEpisodeTitle(e.target.value)}
-                        placeholder="Episode Title"
+                        placeholder="Video Title"
                         className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none"
                     />
+
+                    {/* Genre Selection */}
+                    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 mb-3 text-gray-500">
+                            <Search size={14} />
+                            <input 
+                                type="text"
+                                value={genreSearch}
+                                onChange={e => setGenreSearch(e.target.value)}
+                                placeholder="Search Genre..."
+                                className="bg-transparent text-sm font-bold text-white focus:outline-none w-full placeholder-gray-600"
+                            />
+                        </div>
+                        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto no-scrollbar">
+                            {filteredGenres.map(g => (
+                                <button 
+                                    key={g}
+                                    onClick={() => setSelectedGenre(g)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${selectedGenre === g ? 'bg-neon-purple border-neon-purple text-white' : 'bg-black/40 border-white/5 text-gray-400 hover:border-white/20'}`}
+                                >
+                                    {g}
+                                </button>
+                            ))}
+                            {filteredGenres.length === 0 && (
+                                <p className="text-[10px] text-gray-600 font-bold uppercase w-full text-center py-2">No genres found</p>
+                            )}
+                        </div>
+                    </div>
 
                     <div className="flex gap-3">
                         <button 
@@ -403,16 +596,185 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                     </div>
 
                     <button 
-                        onClick={() => {}} 
-                        className="w-full bg-white text-black py-5 rounded-[24px] font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-white/5"
+                        onClick={handlePublishVideo} 
+                        disabled={isPublishing || !file || !episodeTitle.trim() || !selectedGenre}
+                        className="w-full bg-white text-black py-5 rounded-[24px] font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-white/5 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        Publish Now
+                        {isPublishing ? <div className="w-5 h-5 border-2 border-gray-400 border-t-black rounded-full animate-spin"/> : 'Publish Now'}
                     </button>
                  </div>
             </div>
         ) : (
-            <div className="flex items-center justify-center h-64 text-gray-700 font-bold uppercase text-xs tracking-widest">
-                Interface Coming Soon
+            <div className="space-y-6">
+                <div className="flex bg-gray-900 p-1 rounded-xl mb-6">
+                    <button 
+                        onClick={() => setSeriesMode('create')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${seriesMode === 'create' ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
+                    >
+                        New Series
+                    </button>
+                    <button 
+                        onClick={() => setSeriesMode('add_episode')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${seriesMode === 'add_episode' ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
+                    >
+                        Add Episode
+                    </button>
+                </div>
+
+                {seriesMode === 'create' ? (
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="bg-gray-900/50 p-6 rounded-[32px] border border-white/5 text-center">
+                            <div className="w-20 h-20 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center border border-white/5">
+                                <FolderPlus size={32} className="text-neon-purple" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Create a New Series</h3>
+                            <p className="text-xs text-gray-500 font-medium">Group your videos into seasons and episodes for better discovery.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Cover Upload */}
+                            <div className="border-2 border-dashed border-gray-800 rounded-[24px] h-32 flex flex-col items-center justify-center bg-gray-900/30 hover:border-neon-purple transition-colors relative">
+                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setSeriesCover(e.target.files?.[0] || null)} />
+                                {seriesCover ? (
+                                    <div className="flex items-center gap-3">
+                                        <img src={URL.createObjectURL(seriesCover)} className="w-12 h-12 object-cover rounded-lg border border-white/20" />
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold text-white truncate max-w-[150px]">{seriesCover.name}</p>
+                                            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Cover Selected</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-500">
+                                        <Upload size={24} className="mx-auto mb-2" />
+                                        <p className="text-[10px] font-bold uppercase tracking-widest">Upload Cover Art</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <input 
+                                type="text" 
+                                value={seriesTitle}
+                                onChange={e => setSeriesTitle(e.target.value)}
+                                placeholder="Series Title"
+                                className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none"
+                            />
+
+                            <textarea 
+                                value={seriesDescription}
+                                onChange={e => setSeriesDescription(e.target.value)}
+                                placeholder="Series Synopsis..."
+                                rows={3}
+                                className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-medium text-white focus:border-neon-purple outline-none resize-none"
+                            />
+
+                            {/* Category Selection */}
+                            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-1">Select Genre</p>
+                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto no-scrollbar">
+                                    {VIDEO_GENRES.map(g => (
+                                        <button 
+                                            key={g}
+                                            onClick={() => setSeriesCategory(g)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${seriesCategory === g ? 'bg-neon-purple border-neon-purple text-white' : 'bg-black/40 border-white/5 text-gray-400 hover:border-white/20'}`}
+                                        >
+                                            {g}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={handleCreateSeries}
+                                disabled={isPublishing || !seriesTitle || !seriesDescription || !seriesCategory}
+                                className="w-full bg-white text-black py-5 rounded-[24px] font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-white/5 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isPublishing ? <div className="w-5 h-5 border-2 border-gray-400 border-t-black rounded-full animate-spin"/> : 'Create Series'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="bg-gray-900/50 p-6 rounded-[32px] border border-white/5 text-center">
+                            <div className="w-20 h-20 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center border border-white/5">
+                                <VideoIcon size={32} className="text-neon-pink" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Add New Episode</h3>
+                            <p className="text-xs text-gray-500 font-medium">Continue your story by adding the next chapter.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Series Selection */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Select Series</label>
+                                <select 
+                                    value={selectedSeriesId}
+                                    onChange={e => setSelectedSeriesId(e.target.value)}
+                                    className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none appearance-none"
+                                >
+                                    <option value="" disabled>Choose a series...</option>
+                                    {userSeries.map(s => (
+                                        <option key={s.id} value={s.id}>{s.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Episode Video Upload */}
+                            <div className="border-2 border-dashed border-gray-800 rounded-[24px] h-32 flex flex-col items-center justify-center bg-gray-900/30 hover:border-neon-purple transition-colors relative">
+                                <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setFile(e.target.files?.[0] || null)} />
+                                {file ? (
+                                    <div className="flex items-center gap-3">
+                                        <Film size={24} className="text-neon-purple" />
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold text-white truncate max-w-[150px]">{file.name}</p>
+                                            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Video Selected</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-500">
+                                        <Upload size={24} className="mx-auto mb-2" />
+                                        <p className="text-[10px] font-bold uppercase tracking-widest">Upload Episode Video</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <input 
+                                type="text" 
+                                value={episodeTitle}
+                                onChange={e => setEpisodeTitle(e.target.value)}
+                                placeholder="Episode Title"
+                                className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none"
+                            />
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-2 block">Episode #</label>
+                                    <input 
+                                        type="number" 
+                                        value={seriesEpisodeNumber}
+                                        onChange={e => setSeriesEpisodeNumber(Number(e.target.value))}
+                                        className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none"
+                                    />
+                                </div>
+                                <div className="flex-1 flex items-end">
+                                    <button 
+                                        onClick={() => setIsLocked(!isLocked)}
+                                        className={`w-full py-4 rounded-2xl border font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isLocked ? 'bg-neon-pink/20 border-neon-pink text-neon-pink' : 'bg-gray-900 border-gray-800 text-gray-500'}`}
+                                    >
+                                        <Lock size={14} /> {isLocked ? 'Premium' : 'Free'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={handleAddEpisode}
+                                disabled={isPublishing || !file || !episodeTitle || !selectedSeriesId}
+                                className="w-full bg-white text-black py-5 rounded-[24px] font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-white/5 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isPublishing ? <div className="w-5 h-5 border-2 border-gray-400 border-t-black rounded-full animate-spin"/> : 'Publish Episode'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         )}
       </div>

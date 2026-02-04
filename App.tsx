@@ -16,12 +16,17 @@ import { CharacterChat } from './components/CharacterChat';
 import { SwiftRideHome } from './components/SwiftRideHome';
 import { WalletView } from './components/WalletView';
 import { AdminPanel } from './components/AdminPanel';
+import { AdCenter } from './components/AdCenter';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabView>(TabView.AUTH);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Navigation State
+  const [targetProfile, setTargetProfile] = useState<User | null>(null);
+  const [prevTab, setPrevTab] = useState<TabView>(TabView.FEED);
+
   const [videos, setVideos] = useState<Video[]>([]);
   const [series, setSeries] = useState<Series[]>([]);
   const [activeCharacter, setActiveCharacter] = useState<AICharacter | null>(null);
@@ -61,11 +66,21 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (email?: string, password?: string) => {
+  const handleLogin = async (email?: string, password?: string, isSignUp?: boolean, username?: string, additionalData?: any) => {
     if (!email || !password) return;
     try {
       setIsLoading(true);
-      await api.signIn(email, password);
+      
+      if (isSignUp && username) {
+         // Perform Sign Up with extended profile data
+         await api.signUp(email, password, username, additionalData);
+         // Attempt to sign in immediately after registration to establish session
+         await api.signIn(email, password);
+      } else {
+         // Standard Sign In
+         await api.signIn(email, password);
+      }
+
       const loggedUser = await api.getCurrentUser();
       if (loggedUser) {
         setUser(loggedUser);
@@ -73,7 +88,8 @@ export default function App() {
         await loadInitialData();
       }
     } catch (e) {
-      alert("Authentication failed. Please check your credentials.");
+      console.error(e);
+      alert("Authentication failed. " + (isSignUp ? "Username or Email might be taken." : "Check your credentials."));
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +113,37 @@ export default function App() {
       setUser({ ...user, following: newFollowing });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleOpenProfile = async (userId: string) => {
+    if (userId === user?.id) {
+        setTargetProfile(null);
+        setActiveTab(TabView.PROFILE);
+        return;
+    }
+    try {
+        const profileUser = await api.getUserProfile(userId);
+        if (profileUser) {
+            setTargetProfile(profileUser);
+            setPrevTab(activeTab);
+            setActiveTab(TabView.PROFILE);
+        }
+    } catch (e) {
+        console.error("Failed to load profile", e);
+    }
+  };
+
+  const handleDeleteVideo = async (videoId: string) => {
+    if (!confirm("Are you sure you want to delete this video?")) return;
+    
+    // Optimistic Update: Remove immediately from UI
+    setVideos(prev => prev.filter(v => v.id !== videoId));
+
+    try {
+        await api.deleteVideo(videoId);
+    } catch (e) {
+        console.error("Failed to delete video", e);
     }
   };
 
@@ -124,7 +171,9 @@ export default function App() {
                     isFollowing={user.following.includes(video.creatorId)}
                     onToggleFollow={() => handleToggleFollow(video.creatorId)}
                     isOwner={user.id === video.creatorId}
-                    onDelete={() => {}}
+                    onDelete={() => handleDeleteVideo(video.id)}
+                    currentUser={user}
+                    onOpenProfile={handleOpenProfile}
                   />
                 </div>
               )) : (
@@ -147,14 +196,50 @@ export default function App() {
             onBack={() => setActiveTab(TabView.FEED)} 
             initialPartner={targetPartner}
             onClearTarget={() => setTargetPartner(null)}
+            onOpenProfile={handleOpenProfile}
           />
         );
-      case TabView.EXPLORE: return <ExploreView onBack={() => setActiveTab(TabView.FEED)} onOpenCharacterChat={(char) => { setActiveCharacter(char); setActiveTab(TabView.CHARACTER_CHAT); }} />;
+      case TabView.EXPLORE: return <ExploreView currentUser={user} onUpdateUser={(d) => setUser({...user, ...d})} onBack={() => setActiveTab(TabView.FEED)} onOpenCharacterChat={(char) => { setActiveCharacter(char); setActiveTab(TabView.CHARACTER_CHAT); }} />;
       case TabView.CHARACTER_CHAT: return activeCharacter ? <CharacterChat character={activeCharacter} currentUser={user} onBack={() => setActiveTab(TabView.EXPLORE)} /> : null;
       case TabView.MUSIC: return <MusicView currentTrack={null} isPlaying={false} onPlayTrack={() => {}} onPauseTrack={() => {}} currentUser={user} onBack={() => setActiveTab(TabView.FEED)} />;
       case TabView.WALLET: return <WalletView user={user} onUpdateUser={(d) => setUser({...user, ...d})} onBack={() => setActiveTab(TabView.PROFILE)} />;
-      case TabView.PROFILE: return <ProfileView user={user} videos={videos} series={series} onLogout={() => { api.signOut(); setUser(null); setActiveTab(TabView.AUTH); }} onOpenAdmin={() => setActiveTab(TabView.ADMIN)} onUpdateUser={(d) => setUser({...user, ...d})} onDeleteAccount={() => {}} onDeleteVideo={() => {}} onRemoveProfilePic={() => {}} onOpenAnalytics={() => {}} onOpenAds={() => {}} onOpenRides={() => setActiveTab(TabView.RIDES)} onBack={() => setActiveTab(TabView.FEED)} onMessageUser={messageUser} />;
-      case TabView.UPLOAD: return <CreatorStudio onClose={() => setActiveTab(TabView.FEED)} user={user} videos={videos} onBack={() => setActiveTab(TabView.FEED)} />;
+      case TabView.ADS: return <AdCenter user={user} onBack={() => setActiveTab(TabView.PROFILE)} />;
+      case TabView.PROFILE: 
+        // Determine which profile to show: target or current
+        const profileUser = targetProfile || user;
+        const isCurrentUser = profileUser.id === user.id;
+
+        return (
+          <ProfileView 
+            user={profileUser} 
+            currentUser={user} // Pass the logged-in user for context
+            videos={videos} 
+            series={series} 
+            onLogout={() => { api.signOut(); setUser(null); setActiveTab(TabView.AUTH); }} 
+            onOpenAdmin={() => setActiveTab(TabView.ADMIN)} 
+            onUpdateUser={(d) => {
+                if(isCurrentUser) setUser({...user, ...d}); 
+                // If viewing someone else, we might need to update local state if we follow them, handled inside component mostly
+            }} 
+            onDeleteAccount={() => {}} 
+            onDeleteVideo={handleDeleteVideo} 
+            onRemoveProfilePic={() => {}} 
+            onOpenAnalytics={() => {}} 
+            onOpenAds={() => setActiveTab(TabView.ADS)} 
+            onOpenRides={() => setActiveTab(TabView.RIDES)} 
+            onBack={() => {
+                if (targetProfile) {
+                    setTargetProfile(null);
+                    setActiveTab(prevTab);
+                } else {
+                    setActiveTab(TabView.FEED);
+                }
+            }} 
+            onMessageUser={messageUser} 
+            isCurrentUser={isCurrentUser}
+          />
+        );
+      case TabView.UPLOAD: return <CreatorStudio onClose={() => setActiveTab(TabView.FEED)} user={user} videos={videos} onBack={() => setActiveTab(TabView.FEED)} onVideoUploaded={loadInitialData} />;
       case TabView.ADMIN: return <AdminPanel user={user} onBack={() => setActiveTab(TabView.PROFILE)} />;
       default: return null;
     }
@@ -177,8 +262,11 @@ export default function App() {
             ].map(item => (
                 <button 
                   key={item.tab} 
-                  onClick={() => setActiveTab(item.tab)} 
-                  className={`flex items-center gap-4 p-3 rounded-2xl transition-all ${activeTab === item.tab ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => {
+                      if (item.tab === TabView.PROFILE) setTargetProfile(null);
+                      setActiveTab(item.tab);
+                  }} 
+                  className={`flex items-center gap-4 p-3 rounded-2xl transition-all ${activeTab === item.tab && !targetProfile ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                 >
                     <item.icon size={24} />
                     <span className="hidden lg:inline text-sm font-bold uppercase tracking-widest">{item.label}</span>
@@ -216,8 +304,8 @@ export default function App() {
             <Globe size={22} />
             <span className="text-[8px] font-black uppercase">Social</span>
           </button>
-          <button onClick={() => setActiveTab(TabView.PROFILE)} className={`flex flex-col items-center gap-1 transition-all ${activeTab === TabView.PROFILE ? 'text-white scale-110' : 'text-gray-500'}`}>
-            <UserIcon size={22} fill={activeTab === TabView.PROFILE ? 'currentColor' : 'none'} />
+          <button onClick={() => { setTargetProfile(null); setActiveTab(TabView.PROFILE); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === TabView.PROFILE && !targetProfile ? 'text-white scale-110' : 'text-gray-500'}`}>
+            <UserIcon size={22} fill={activeTab === TabView.PROFILE && !targetProfile ? 'currentColor' : 'none'} />
             <span className="text-[8px] font-black uppercase">Me</span>
           </button>
         </div>

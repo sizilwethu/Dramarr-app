@@ -44,7 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onBack }) => {
                 </div>
             </div>
             
-            <div className="h-48 w-full">
+            <div className="h-48 w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />

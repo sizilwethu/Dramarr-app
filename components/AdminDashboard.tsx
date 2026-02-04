@@ -27,7 +27,7 @@ export const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) =
         <div className="px-4 mb-8">
             <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-4">
                 <h3 className="text-gray-400 text-sm mb-2 font-bold uppercase">Weekly Revenue</h3>
-                <div className="h-[200px]">
+                <div className="h-[200px] w-full min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />

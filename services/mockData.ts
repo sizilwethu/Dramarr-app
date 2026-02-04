@@ -1,5 +1,88 @@
 
-import { SocialPost, Story, Conversation, Message } from '../types';
+import { SocialPost, Story, Conversation, Message, Video, Series, AICharacter, MusicTrack } from '../types';
+
+export const MOCK_VIDEOS: Video[] = [
+    {
+        id: 'v1',
+        url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400&h=700&fit=crop',
+        creatorId: 'u1',
+        creatorName: 'ceo_rebellion',
+        creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ceo',
+        description: 'The moment he realized his secretary was the billionaire heiress... 💎 #CEO #Drama #SecretIdentity',
+        tags: ['CEO', 'Romance', 'Billionaire'],
+        likes: 15400,
+        comments: 892,
+        shares: 2300,
+        isLocked: false,
+        unlockCost: 0,
+        seriesTitle: 'The Undercover Mogul',
+        episodeNumber: 1,
+        timestamp: '2023-12-01',
+        views: 45000
+    },
+    {
+        id: 'v2',
+        url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=400&h=700&fit=crop',
+        creatorId: 'u2',
+        creatorName: 'mystery_queen',
+        creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mystery',
+        description: 'She came back for revenge, but found a secret she never expected. 🕵️‍♀️💥',
+        tags: ['Revenge', 'Mystery', 'Thriller'],
+        likes: 22100,
+        comments: 1205,
+        shares: 4500,
+        isLocked: true,
+        unlockCost: 5,
+        seriesTitle: 'Shadow of Betrayal',
+        episodeNumber: 5,
+        timestamp: '2023-12-05',
+        views: 89000
+    }
+];
+
+export const MOCK_SERIES: Series[] = [
+    {
+        id: 'ser1',
+        title: 'The Undercover Mogul',
+        description: 'A billionaire lives as a delivery driver to find true love.',
+        coverUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=600&fit=crop',
+        creatorId: 'u1',
+        category: 'CEO',
+        year: 2023,
+        totalEpisodes: 24
+    },
+    {
+        id: 'ser2',
+        title: 'Shadow of Betrayal',
+        description: 'An elite spy is framed by her own agency.',
+        coverUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
+        creatorId: 'u2',
+        category: 'Action',
+        year: 2024,
+        totalEpisodes: 12
+    }
+];
+
+export const MOCK_CHARACTERS: AICharacter[] = [
+    {
+        id: 'char1',
+        name: 'Elena Vance',
+        seriesId: 'ser2',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=elena',
+        description: 'A cold, calculated former operative seeking justice.',
+        personality: 'Stoic, brilliant, and occasionally witty.'
+    },
+    {
+        id: 'char2',
+        name: 'Marcus Thorne',
+        seriesId: 'ser1',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marcus',
+        description: 'The billionaire hiding in plain sight.',
+        personality: 'Charming, humble, but commandingly intelligent.'
+    }
+];
 
 export const MOCK_POSTS: SocialPost[] = [
     {
@@ -110,4 +193,23 @@ export const MOCK_CHAT_MESSAGES: Message[] = [
     { id: 'm1', senderId: 'u1', receiverId: 'me', content: 'Hey, I saw your latest drama post!', timestamp: Date.now() - 600000, isRead: true },
     { id: 'm2', senderId: 'me', receiverId: 'u1', content: 'Thanks! We worked hard on that scene.', timestamp: Date.now() - 300000, isRead: true },
     { id: 'm3', senderId: 'u1', receiverId: 'me', content: 'The script for the next episode is ready!', timestamp: Date.now() - 120000, isRead: false }
+];
+
+export const MOCK_MUSIC: MusicTrack[] = [
+    {
+        id: 'm1',
+        title: 'Neon Nights',
+        artist: 'SynthWave Collective',
+        coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        duration: '3:45'
+    },
+    {
+        id: 'm2',
+        title: 'Dramatic Entrance',
+        artist: 'Cinematic Scores',
+        coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        duration: '2:15'
+    }
 ];

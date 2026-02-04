@@ -28,9 +28,11 @@ export interface User {
   dob?: string;
   gender?: string;
   address?: string;
+  country?: string;
+  state?: string;
+  city?: string; // Added City
   subscriptionStatus?: string;
   joinDate: string;
-  country?: string;
   // New fields for settings and rewards
   dailyPremiumUnlockCount?: number;
   lastPremiumUnlockDate?: string;
@@ -126,7 +128,8 @@ export enum TabView {
   RIDES = 'RIDES',
   WALLET = 'WALLET',
   ADMIN = 'ADMIN',
-  CHARACTER_CHAT = 'CHARACTER_CHAT'
+  CHARACTER_CHAT = 'CHARACTER_CHAT',
+  ADS = 'ADS'
 }
 
 export interface Video {
@@ -161,6 +164,7 @@ export interface Series {
   description: string;
   coverUrl: string;
   creatorId: string;
+  creatorName?: string; // Added for search functionality
   category: string;
   year: number;
   totalEpisodes: number;
@@ -301,6 +305,13 @@ export interface AdCampaign {
   impressions: number;
   clicks: number;
   status: 'active' | 'expired';
+  // New Targeting Fields
+  targetCountry?: string;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
+  targetGender?: string;
+  targetInterests?: string[];
+  durationDays?: number;
 }
 
 export const VIRTUAL_GIFTS: Gift[] = [
