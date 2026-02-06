@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Video, Series, Gift, VIRTUAL_GIFTS, User, Comment } from '../types';
-import { Heart, MessageCircle, Share2, Lock, Play, List, Zap, Disc, Plus, Check, Trash2, Coins, ExternalLink, Copy, X, MoreHorizontal, Flag, AlertTriangle, ChevronRight, Split, Maximize2, Gift as GiftIcon, Sparkles, Volume2, VolumeX, Send, RotateCcw, RotateCw, Gauge } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Lock, Play, List, Zap, Disc, Plus, Check, Trash2, Coins, ExternalLink, Copy, X, MoreHorizontal, Flag, AlertTriangle, ChevronRight, Split, Maximize2, Gift as GiftIcon, Sparkles, Volume2, VolumeX, Send, RotateCcw, RotateCw, Gauge, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../services/api';
 
 interface VideoPlayerProps {
@@ -20,6 +20,7 @@ interface VideoPlayerProps {
   onChoiceSelected?: (targetId: string) => void;
   currentUser: User;
   onOpenProfile?: (userId: string) => void;
+  onTagClick?: (tag: string) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
@@ -37,11 +38,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEnded,
   onChoiceSelected,
   currentUser,
-  onOpenProfile
+  onOpenProfile,
+  onTagClick
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default to muted for better auto-play support
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(video.likes);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -52,6 +54,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
+  // UX State
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [isLikePulsing, setIsLikePulsing] = useState(false);
@@ -73,6 +77,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     viewCountedRef.current = false;
     setShowChoices(false);
     setPlaybackSpeed(1.0);
+    setIsDescriptionExpanded(false); // Reset expansion on new video
     
     // Initial optimistic update from props
     setLikeCount(video.likes);
@@ -102,12 +107,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           if (videoRef.current) {
               videoRef.current.muted = isMuted; // Ensure state matches
               videoRef.current.playbackRate = playbackSpeed; // Restore speed
-              videoRef.current.play().then(() => {
-                  setIsPlaying(true);
-              }).catch(e => {
-                  console.log('Autoplay prevented', e);
-                  setIsPlaying(false);
-              });
+              const playPromise = videoRef.current.play();
+              if (playPromise !== undefined) {
+                  playPromise.then(() => {
+                      setIsPlaying(true);
+                  }).catch(e => {
+                      console.log('Autoplay prevented', e);
+                      setIsPlaying(false);
+                      // If failed, try muting and playing again (fallback)
+                      if (!isMuted) {
+                          setIsMuted(true);
+                          videoRef.current!.muted = true;
+                          videoRef.current!.play().catch(console.error);
+                      }
+                  });
+              }
           }
         }, 300);
         viewTimer = setTimeout(() => {
@@ -180,6 +194,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const newMuted = !isMuted;
       setIsMuted(newMuted);
       if (videoRef.current) videoRef.current.muted = newMuted;
+  };
+
+  const toggleDescription = (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      setIsDescriptionExpanded(!isDescriptionExpanded);
   };
 
   const handleLike = () => {
@@ -323,7 +342,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         {/* Action Sidebar */}
-        <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center z-40 pb-4">
+        <div className="absolute right-2 bottom-32 flex flex-col gap-4 items-center z-40 pb-4">
             <div className="relative mb-2 cursor-pointer" onClick={handleAvatarClick}>
                 <div className={`w-12 h-12 rounded-full border-2 ${video.isAd ? 'border-yellow-400' : 'border-white'} p-0.5 overflow-hidden`}><img src={video.creatorAvatar} className="w-full h-full object-cover rounded-full" /></div>
                 {!isFollowing && !isOwner && !video.isAd && (
@@ -345,12 +364,49 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <button onClick={() => setIsTheaterMode(true)} className="flex flex-col items-center gap-1 group"><div className="p-2 rounded-full text-white bg-black/20 backdrop-blur-sm transition-all group-hover:bg-black/40"><Maximize2 size={32} /></div><span className="text-white text-xs font-bold uppercase text-[8px]">Theater</span></button>
         </div>
 
-        {/* Bottom Metadata */}
-        <div className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
-            <div className="pointer-events-auto max-w-[75%]">
-                <h3 className="text-white font-bold text-lg mb-1 flex items-center gap-2 cursor-pointer" onClick={handleAvatarClick}>@{video.creatorName}{video.isAd && <span className="bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">Sponsored</span>}</h3>
-                <div className="text-white text-sm mb-2 line-clamp-2 leading-relaxed">{video.description}</div>
-                {video.tags && video.tags.length > 0 && (<div className="flex flex-wrap gap-2 mb-2">{video.tags.map((tag, i) => (<span key={i} className="text-neon-purple font-bold text-xs">#{tag}</span>))}</div>)}
+        {/* Bottom Metadata & Description Area */}
+        <div className={`absolute bottom-0 left-0 right-0 z-30 p-4 transition-all duration-500 ease-in-out bg-gradient-to-t from-black/95 via-black/60 to-transparent ${isDescriptionExpanded ? 'pb-24 pt-12 bg-black/80 backdrop-blur-md' : 'pb-24'}`}>
+            <div className="pointer-events-auto max-w-[85%] flex flex-col items-start text-left">
+                {/* Creator Name */}
+                <h3 className="text-white font-bold text-lg mb-1 flex items-center gap-2 cursor-pointer drop-shadow-md" onClick={handleAvatarClick}>
+                    @{video.creatorName}
+                    {video.isAd && <span className="bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded font-bold uppercase shadow-sm">Sponsored</span>}
+                </h3>
+
+                {/* Description - Click to Expand */}
+                <div 
+                    className="relative cursor-pointer w-full group" 
+                    onClick={toggleDescription}
+                >
+                    <p className={`text-white text-sm font-medium leading-relaxed drop-shadow-md transition-all duration-300 ${isDescriptionExpanded ? 'overflow-y-auto max-h-60 pr-2' : 'line-clamp-2'}`}>
+                        {video.description}
+                    </p>
+                </div>
+
+                {/* See More Toggle */}
+                {(video.description.length > 50 || (video.tags && video.tags.length > 0)) && (
+                     <button 
+                        onClick={toggleDescription} 
+                        className="text-gray-300 text-xs font-bold mt-1 hover:text-white transition-colors flex items-center gap-1"
+                    >
+                        {isDescriptionExpanded ? 'See less' : 'See more'}
+                    </button>
+                )}
+
+                {/* Tags - Always rendered but container animates height */}
+                {video.tags && video.tags.length > 0 && (
+                    <div className={`flex flex-wrap gap-2 mt-3 transition-all duration-500 ease-in-out overflow-hidden ${isDescriptionExpanded ? 'max-h-40 opacity-100' : 'max-h-8 opacity-90'}`}>
+                        {video.tags.map((tag, i) => (
+                            <span 
+                                key={i} 
+                                className="text-white bg-white/20 hover:bg-white/30 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all active:scale-95 border border-white/10 shadow-sm"
+                                onClick={(e) => { e.stopPropagation(); if (onTagClick) onTagClick(tag); }}
+                            >
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
 

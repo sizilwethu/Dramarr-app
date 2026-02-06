@@ -201,21 +201,39 @@ export interface Story {
   privacy: 'public' | 'friends' | 'close_friends';
 }
 
+export interface LinkData {
+  url: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  domain?: string;
+}
+
 export interface SocialPost {
   id: string;
   userId: string;
   username: string;
   avatarUrl: string;
   content: string;
-  imageUrl?: string | null;
-  mediaUrl?: string | null; // Generic media URL
-  mediaType?: 'image' | 'video' | 'text'; // Type of media attached
+  
+  // Media Handling
+  mediaUrl?: string | null; // Primary/Single media
+  mediaUrls?: string[]; // For Carousels
+  mediaType?: 'image' | 'video' | 'text' | 'carousel' | 'link' | 'scene'; // Added types
+  
+  // Special Types
+  linkData?: LinkData;
+  isPinned?: boolean;
+  isAd?: boolean;
+  adActionLabel?: string;
+  adTargetUrl?: string;
+
+  // Stats
   likes: number;
   comments: number;
-  timestamp: string;
-  isAd?: boolean;
   views?: number;
-  adActionLabel?: string;
+  timestamp: string;
+  imageUrl?: string | null; // Legacy support
 }
 
 export interface AICharacter {

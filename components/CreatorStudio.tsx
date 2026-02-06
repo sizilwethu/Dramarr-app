@@ -9,7 +9,7 @@ interface CreatorStudioProps {
   onClose: () => void;
   user: User;
   videos: Video[];
-  initialMode?: 'video' | 'series' | 'monetization';
+  initialMode?: 'scene' | 'series' | 'monetization';
   onBack: () => void;
   onVideoUploaded?: () => void;
 }
@@ -21,8 +21,8 @@ const VIDEO_GENRES = [
   "Tech", "Cooking", "Travel", "Fitness", "Education", "Gaming", "DIY", "ASMR", "Lifestyle", "Fashion"
 ];
 
-export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'video', onBack, onVideoUploaded }) => {
-  const [mode, setMode] = useState<'video' | 'series' | 'monetization'>(initialMode);
+export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, videos, initialMode = 'scene', onBack, onVideoUploaded }) => {
+  const [mode, setMode] = useState<'scene' | 'series' | 'monetization'>(initialMode);
   const [seriesMode, setSeriesMode] = useState<'create' | 'add_episode'>('create');
   
   // Upload State
@@ -36,8 +36,8 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
   const [isPayoutProcessing, setIsPayoutProcessing] = useState(false);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
 
-  // Episode/Video State
-  const [episodeTitle, setEpisodeTitle] = useState('');
+  // Episode/Scene State
+  const [sceneTitle, setSceneTitle] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [isPremiere, setIsPremiere] = useState(false);
   
@@ -47,7 +47,8 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
   const [seriesCover, setSeriesCover] = useState<File | null>(null);
   const [seriesCategory, setSeriesCategory] = useState('');
   
-  // Add Episode State
+  // Add Episode State (for Series mode)
+  const [episodeTitle, setEpisodeTitle] = useState(''); // Separate state for episode title
   const [userSeries, setUserSeries] = useState<Series[]>([]);
   const [selectedSeriesId, setSelectedSeriesId] = useState('');
   const [seriesEpisodeNumber, setSeriesEpisodeNumber] = useState(1);
@@ -101,8 +102,8 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
       }
   }, [selectedSeriesId, userSeries]);
 
-  const handlePublishVideo = async () => {
-      if (!file || !episodeTitle.trim() || !selectedGenre) {
+  const handlePublishScene = async () => {
+      if (!file || !sceneTitle.trim() || !selectedGenre) {
           setPublishFeedback({ type: 'error', message: 'Please select a video, enter title, and choose a genre.' });
           setTimeout(() => setPublishFeedback(null), 3000);
           return;
@@ -110,13 +111,13 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
 
       setIsPublishing(true);
       try {
-          await api.uploadVideo(file, thumbnailFile, user.id, episodeTitle, isLocked, selectedGenre);
-          setPublishFeedback({ type: 'success', message: 'Published successfully! Your video is now live.' });
+          await api.uploadVideo(file, thumbnailFile, user.id, sceneTitle, isLocked, selectedGenre);
+          setPublishFeedback({ type: 'success', message: 'Scene published! Your Reel is live.' });
           
           // Clear form
           setFile(null);
           setThumbnailFile(null);
-          setEpisodeTitle('');
+          setSceneTitle('');
           setIsLocked(false);
           setIsPremiere(false);
           setSelectedGenre('');
@@ -494,7 +495,7 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
 
       <div className="px-4 mb-6">
         <div className="bg-gray-900 p-1 rounded-xl flex overflow-x-auto no-scrollbar gap-1">
-            {['video', 'series', 'monetization'].map((m) => (
+            {['scene', 'series', 'monetization'].map((m) => (
                 <button 
                     key={m}
                     onClick={() => setMode(m as any)} 
@@ -507,7 +508,7 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 no-scrollbar">
-        {mode === 'monetization' ? renderMonetization() : mode === 'video' ? (
+        {mode === 'monetization' ? renderMonetization() : mode === 'scene' ? (
             <div className="space-y-6">
                  {/* Video Input */}
                  <div className="border-2 border-dashed border-gray-800 rounded-[32px] h-48 flex flex-col items-center justify-center bg-gray-900/30 mb-2 hover:border-neon-purple transition-colors relative group">
@@ -520,7 +521,7 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                     ) : (
                         <div className="text-center group-hover:scale-105 transition-transform">
                             <Upload className="w-10 h-10 text-gray-700 mx-auto mb-2 group-hover:text-neon-purple transition-colors" />
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Upload Video</p>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Upload Scene (Reel)</p>
                         </div>
                     )}
                  </div>
@@ -546,9 +547,9 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                  <div className="space-y-4">
                     <input 
                         type="text" 
-                        value={episodeTitle}
-                        onChange={e => setEpisodeTitle(e.target.value)}
-                        placeholder="Video Title"
+                        value={sceneTitle}
+                        onChange={e => setSceneTitle(e.target.value)}
+                        placeholder="Scene Title / Caption"
                         className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 text-sm font-bold text-white focus:border-neon-purple outline-none"
                     />
 
@@ -580,27 +581,12 @@ export const CreatorStudio: React.FC<CreatorStudioProps> = ({ onClose, user, vid
                         </div>
                     </div>
 
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => setIsLocked(!isLocked)}
-                            className={`flex-1 py-4 rounded-2xl border font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isLocked ? 'bg-neon-pink/20 border-neon-pink text-neon-pink' : 'bg-gray-900 border-gray-800 text-gray-500'}`}
-                        >
-                            <Lock size={14} /> Premium
-                        </button>
-                        <button 
-                            onClick={() => setIsPremiere(!isPremiere)}
-                            className={`flex-1 py-4 rounded-2xl border font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isPremiere ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-900 border-gray-800 text-gray-500'}`}
-                        >
-                            <Calendar size={14} /> Premiere
-                        </button>
-                    </div>
-
                     <button 
-                        onClick={handlePublishVideo} 
-                        disabled={isPublishing || !file || !episodeTitle.trim() || !selectedGenre}
+                        onClick={handlePublishScene} 
+                        disabled={isPublishing || !file || !sceneTitle.trim() || !selectedGenre}
                         className="w-full bg-white text-black py-5 rounded-[24px] font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-white/5 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {isPublishing ? <div className="w-5 h-5 border-2 border-gray-400 border-t-black rounded-full animate-spin"/> : 'Publish Now'}
+                        {isPublishing ? <div className="w-5 h-5 border-2 border-gray-400 border-t-black rounded-full animate-spin"/> : 'Publish Scene'}
                     </button>
                  </div>
             </div>

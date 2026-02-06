@@ -1,23 +1,24 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { User, TabView, Video, Series, AICharacter } from './types';
-import { api } from './services/api';
-import { AuthScreen } from './components/AuthScreen';
-import { SocialView } from './components/SocialView';
-import { ProfileView } from './components/ProfileView';
-import { ExploreView } from './components/ExploreView';
-import { CreatorStudio } from './components/CreatorStudio';
-import { VideoPlayer } from './components/VideoPlayer';
-import { DriveView } from './components/DriveView';
-import { WalletView } from './components/WalletView';
-import { AdCenter } from './components/AdCenter';
-import { AdminPanel } from './components/AdminPanel';
-import { CharacterChat } from './components/CharacterChat';
-import { MusicView } from './components/MusicView';
-import { DailyRewardView } from './components/DailyRewardView';
-import { InterstitialAd } from './components/InterstitialAd';
+import { User, TabView, Video, Series, AICharacter } from '../types';
+import { api } from '../services/api';
+import { AuthScreen } from '../components/AuthScreen';
+import { SocialView } from '../components/SocialView';
+import { ProfileView } from '../components/ProfileView';
+import { ExploreView } from '../components/ExploreView';
+import { CreatorStudio } from '../components/CreatorStudio';
+import { VideoPlayer } from '../components/VideoPlayer';
+import { DriveView } from '../components/DriveView';
+import { WalletView } from '../components/WalletView';
+import { AdCenter } from '../components/AdCenter';
+import { AdminPanel } from '../components/AdminPanel';
+import { CharacterChat } from '../components/CharacterChat';
+import { MusicView } from '../components/MusicView';
+import { DailyRewardView } from '../components/DailyRewardView';
+import { InterstitialAd } from '../components/InterstitialAd';
 import { Home, Compass, PlusSquare, MessageCircle, User as UserIcon, Loader2 } from 'lucide-react';
 
-export const App = () => {
+const App = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabView>(TabView.AUTH);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -357,3 +358,5 @@ export const App = () => {
     </div>
   );
 };
+
+export default App;

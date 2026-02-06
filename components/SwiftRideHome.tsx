@@ -90,7 +90,7 @@ export const SwiftRideHome: React.FC<SwiftRideHomeProps> = ({ user, onUpdateUser
   const handleComplete = async () => {
     if (activeRide) {
       try {
-        await api.updateProfile(user.id, { wallet_balance: user.walletBalance - activeRide.fare });
+        await api.updateProfile(user.id, { walletBalance: user.walletBalance - activeRide.fare });
         onUpdateUser({ walletBalance: user.walletBalance - activeRide.fare });
         setRideStatus('COMPLETED');
         setTimeout(() => {

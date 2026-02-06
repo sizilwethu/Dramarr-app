@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   username text UNIQUE,
   avatar_url text,
+  public_key text, -- ADDED: For End-to-End Encryption
   is_verified boolean DEFAULT false,
   is_creator boolean DEFAULT false,
   is_admin boolean DEFAULT false,
@@ -69,6 +70,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'city') THEN
         ALTER TABLE public.profiles ADD COLUMN city text;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'public_key') THEN
+        ALTER TABLE public.profiles ADD COLUMN public_key text;
     END IF;
 END $$;
 

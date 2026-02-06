@@ -86,40 +86,89 @@ export const MOCK_CHARACTERS: AICharacter[] = [
 
 export const MOCK_POSTS: SocialPost[] = [
     {
+        id: 'p_pinned',
+        userId: 'admin',
+        username: 'dramarr_official',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+        content: '🎉 Welcome to the new social feed! You can now share Scenes, Photos, and more. Check the pinned guidelines.',
+        mediaType: 'text',
+        isPinned: true,
+        likes: 5400,
+        comments: 230,
+        timestamp: '1h ago'
+    },
+    {
         id: 'p1',
         userId: 'u1',
         username: 'ceo_rebellion',
         avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ceo',
-        content: 'Just finished filming the season finale of "The Undercover Mogul". The twist in the boardroom is going to break the internet! 💼🔥 #CEO #Drama #SeasonFinale',
-        mediaUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80',
-        mediaType: 'image',
+        content: 'Behind the scenes: The boardroom set construction! 🏗️ We built this in 3 days.',
+        mediaUrls: [
+            'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80',
+            'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&q=80',
+            'https://images.unsplash.com/photo-1600508774634-4e11d34730e2?w=800&q=80'
+        ],
+        mediaType: 'carousel',
         likes: 1240,
         comments: 85,
         timestamp: '2h ago'
     },
     {
-        id: 'p2',
+        id: 'p_scene_1',
         userId: 'u2',
         username: 'mystery_queen',
         avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mystery',
-        content: 'Who do you think betrayed Elena in Episode 4? I’m reading all your theories! 🔍🕵️‍♀️',
-        mediaUrl: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=800&q=80',
-        mediaType: 'image',
-        likes: 890,
-        comments: 342,
+        content: 'Exclusive sneak peek at Episode 5! The betrayal runs deep... 🗡️ #Scene #Drama',
+        mediaUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        mediaType: 'scene',
+        likes: 3400,
+        comments: 420,
+        timestamp: '3h ago',
+        views: 15000
+    },
+    {
+        id: 'p_link_1',
+        userId: 'u3',
+        username: 'tech_props_inc',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tech',
+        content: 'Need futuristic props for your next sci-fi drama? Check out our new catalog.',
+        mediaType: 'link',
+        linkData: {
+            url: 'https://example.com/props',
+            title: '2025 Prop Catalog - Cyberpunk Edition',
+            description: 'High quality resin prints and LED integrated props for film.',
+            imageUrl: 'https://images.unsplash.com/photo-1535378437323-9555f3e7f5bb?w=800&q=80',
+            domain: 'prop-shop.com'
+        },
+        likes: 45,
+        comments: 2,
         timestamp: '5h ago'
     },
     {
-        id: 'p3',
-        userId: 'u3',
-        username: 'urban_sketches',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=urban',
-        content: 'Check out the new SwiftRide integration! Booking a ride to the set has never been easier. 🚗✨',
-        mediaUrl: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80',
+        id: 'p_ad_1',
+        userId: 'brand_x',
+        username: 'Lumina Skin',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lumina',
+        content: 'Get camera-ready skin with our new Glow Serum. Used by top drama stars.',
+        mediaUrl: 'https://images.unsplash.com/photo-1556228720-1957be83f740?w=800&q=80',
         mediaType: 'image',
-        likes: 450,
-        comments: 12,
-        timestamp: '1d ago'
+        isAd: true,
+        adActionLabel: 'Shop Now',
+        adTargetUrl: 'https://lumina.com',
+        likes: 200,
+        comments: 10,
+        timestamp: 'Sponsored'
+    },
+    {
+        id: 'p_text_1',
+        userId: 'u4',
+        username: 'screenwriter_joe',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=joe',
+        content: 'Unpopular opinion: The "amnesia" trope is actually great if the character remembers the WRONG life instead of nothing at all. Thoughts? 🤔',
+        mediaType: 'text',
+        likes: 890,
+        comments: 342,
+        timestamp: '6h ago'
     }
 ];
 

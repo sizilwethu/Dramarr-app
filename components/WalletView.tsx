@@ -34,7 +34,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, onUpdateUser, onBa
         
         // Update user balance in database
         const newBalance = (user.walletBalance || 0) + selectedAmount;
-        await api.updateProfile(user.id, { wallet_balance: newBalance });
+        await api.updateProfile(user.id, { walletBalance: newBalance });
         
         // Update local state
         onUpdateUser({ walletBalance: newBalance });

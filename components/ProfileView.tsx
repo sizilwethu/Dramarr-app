@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Video, Series, CATEGORIES, Conversation, SocialPost, Comment } from '../types';
 import { api } from '../services/api';
@@ -439,7 +438,7 @@ const SettingsModal = ({ user, onClose, onLogout, onUpdateUser }: { user: User, 
                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 ml-1">Ecosystem Configuration</h3>
                 <SettingItem icon={Zap} label="App Preferences" value="Theme, Language, Playback" onClick={() => setCurrentSubPage('preferences')} />
                 <SettingItem icon={Bell} label="Notification Engine" onClick={() => setCurrentSubPage('notifications')} />
-                <Shield label="Privacy & Sovereignty" onClick={() => setCurrentSubPage('privacy')} />
+                <SettingItem icon={Shield} label="Privacy & Sovereignty" onClick={() => setCurrentSubPage('privacy')} />
             </div>
 
             <div className="mb-8">
